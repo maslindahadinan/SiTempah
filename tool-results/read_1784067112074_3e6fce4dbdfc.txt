@@ -1,0 +1,800 @@
+     1→"use client"
+     2→
+     3→import { useSession } from "next-auth/react"
+     4→import { useQuery } from "@tanstack/react-query"
+     5→import { motion } from "framer-motion"
+     6→import { useAppStore } from "@/stores/app-store"
+     7→import { StatusBadge } from "@/components/common/status-badge"
+     8→import {
+     9→  CalendarCheck,
+    10→  Clock,
+    11→  CheckCircle2,
+    12→  XCircle,
+    13→  Building2,
+    14→  Users,
+    15→  FileText,
+    16→  Pause,
+    17→  Ban,
+    18→  ArrowRight,
+    19→  TrendingUp,
+    20→  PieChart as PieChartIcon,
+    21→  BarChart3,
+    22→  Loader2,
+    23→  Bell,
+    24→  Activity,
+    25→} from "lucide-react"
+    26→import {
+    27→  ResponsiveContainer,
+    28→  PieChart,
+    29→  Pie,
+    30→  Cell,
+    31→  BarChart,
+    32→  Bar,
+    33→  XAxis,
+    34→  YAxis,
+    35→  CartesianGrid,
+    36→  Tooltip,
+    37→  Legend,
+    38→} from "recharts"
+    39→import {
+    40→  formatDate,
+    41→  formatDateTime,
+    42→  formatTimeRange,
+    43→  getRoleLabel,
+    44→  getStatusLabel,
+    45→  cn,
+    46→} from "@/lib/utils"
+    47→
+    48→// ---------- Types ----------
+    49→interface UserStats {
+    50→  totalBookings: number
+    51→  pending: number
+    52→  approved: number
+    53→  rejected: number
+    54→}
+    55→interface UpcomingBooking {
+    56→  id: string
+    57→  title: string
+    58→  status: string
+    59→  startTime: string
+    60→  endTime: string
+    61→  facility: { name: string; category: string; location: string }
+    62→}
+    63→interface UserDashboard {
+    64→  role: "user"
+    65→  stats: UserStats
+    66→  upcomingBookings: UpcomingBooking[]
+    67→}
+    68→
+    69→interface ManagerStats {
+    70→  pending: number
+    71→  approved: number
+    72→  kiv: number
+    73→  rejected: number
+    74→  managedFacilities: number
+    75→}
+    76→interface PendingBooking {
+    77→  id: string
+    78→  title: string
+    79→  status: string
+    80→  startTime: string
+    81→  endTime: string
+    82→  createdAt: string
+    83→  facility: { name: string; category: string }
+    84→  user: { fullName: string; department: string }
+    85→}
+    86→interface PopularFacility {
+    87→  id: string
+    88→  name: string
+    89→  category: string
+    90→  _count: { bookings: number }
+    91→}
+    92→interface ManagerDashboard {
+    93→  role: "manager"
+    94→  stats: ManagerStats
+    95→  pendingBookings: PendingBooking[]
+    96→  popularFacilities: PopularFacility[]
+    97→}
+    98→
+    99→interface AdminStats {
+   100→  totalUsers: number
+   101→  totalFacilities: number
+   102→  totalBookings: number
+   103→  pending: number
+   104→  approved: number
+   105→  kiv: number
+   106→  rejected: number
+   107→  cancelled: number
+   108→}
+   109→interface RecentBooking {
+   110→  id: string
+   111→  title: string
+   112→  status: string
+   113→  startTime: string
+   114→  endTime: string
+   115→  facility: { name: string; category: string }
+   116→  user: { fullName: string; department: string }
+   117→}
+   118→interface AdminDashboard {
+   119→  role: "admin"
+   120→  stats: AdminStats
+   121→  recentBookings: RecentBooking[]
+   122→  facilitiesByCategory: { category: string; _count: number }[]
+   123→  bookingsByStatus: { status: string; _count: number }[]
+   124→  usersByRole: { role: string; _count: number }[]
+   125→}
+   126→
+   127→type DashboardData = UserDashboard | ManagerDashboard | AdminDashboard
+   128→
+   129→// ---------- Fetcher ----------
+   130→async function fetchDashboardStats(): Promise<DashboardData> {
+   131→  const res = await fetch("/api/dashboard/stats")
+   132→  if (!res.ok) throw new Error("Gagal memuatkan statistik papan pemuka")
+   133→  return res.json()
+   134→}
+   135→
+   136→// ---------- Chart palette ----------
+   137→const CHART_COLORS = ["#14B8A6", "#0F4C81", "#F59E0B", "#EF4444", "#22C55E"]
+   138→
+   139→// ---------- Stat Card ----------
+   140→interface StatCardProps {
+   141→  icon: React.ComponentType<{ className?: string }>
+   142→  label: string
+   143→  value: number | string
+   144→  gradient: string
+   145→  index: number
+   146→  onClick?: () => void
+   147→}
+   148→
+   149→function StatCard({ icon: Icon, label, value, gradient, index, onClick }: StatCardProps) {
+   150→  return (
+   151→    <motion.div
+   152→      initial={{ opacity: 0, y: 20 }}
+   153→      animate={{ opacity: 1, y: 0 }}
+   154→      transition={{ duration: 0.35, delay: index * 0.06 }}
+   155→      className={cn(
+   156→        "glass-card glass-card-hover p-5 relative overflow-hidden",
+   157→        onClick && "cursor-pointer"
+   158→      )}
+   159→      onClick={onClick}
+   160→    >
+   161→      <div
+   162→        className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-20 blur-2xl"
+   163→        style={{ background: gradient }}
+   164→      />
+   165→      <div className="relative flex items-start justify-between">
+   166→        <div>
+   167→          <p className="text-xs font-medium text-white/60 uppercase tracking-wider">{label}</p>
+   168→          <p className="text-3xl font-bold text-white mt-2">{value}</p>
+   169→        </div>
+   170→        <div
+   171→          className="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-lg"
+   172→          style={{ background: gradient }}
+   173→        >
+   174→          <Icon className="w-5 h-5" />
+   175→        </div>
+   176→      </div>
+   177→    </motion.div>
+   178→  )
+   179→}
+   180→
+   181→// ---------- Section Card ----------
+   182→function SectionCard({
+   183→  title,
+   184→  icon: Icon,
+   185→  action,
+   186→  children,
+   187→  className,
+   188→}: {
+   189→  title: string
+   190→  icon: React.ComponentType<{ className?: string }>
+   191→  action?: React.ReactNode
+   192→  children: React.ReactNode
+   193→  className?: string
+   194→}) {
+   195→  return (
+   196→    <motion.div
+   197→      initial={{ opacity: 0, y: 16 }}
+   198→      animate={{ opacity: 1, y: 0 }}
+   199→      transition={{ duration: 0.35 }}
+   200→      className={cn("glass-card p-5 md:p-6 flex flex-col", className)}
+   201→    >
+   202→      <div className="flex items-center justify-between mb-4">
+   203→        <div className="flex items-center gap-2.5">
+   204→          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#14B8A6]/25 to-[#0F4C81]/25 border border-white/10 flex items-center justify-center">
+   205→            <Icon className="w-4.5 h-4.5 text-[#14B8A6]" />
+   206→          </div>
+   207→          <h3 className="font-semibold text-white text-base md:text-lg">{title}</h3>
+   208→        </div>
+   209→        {action}
+   210→      </div>
+   211→      <div className="flex-1">{children}</div>
+   212→    </motion.div>
+   213→  )
+   214→}
+   215→
+   216→// ---------- Loading skeleton ----------
+   217→function DashboardLoading() {
+   218→  return (
+   219→    <div className="space-y-6">
+   220→      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+   221→        {Array.from({ length: 4 }).map((_, i) => (
+   222→          <div key={i} className="glass-card p-5 h-28 animate-pulse">
+   223→            <div className="h-3 w-20 bg-white/10 rounded mb-3" />
+   224→            <div className="h-7 w-16 bg-white/10 rounded" />
+   225→          </div>
+   226→        ))}
+   227→      </div>
+   228→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   229→        {Array.from({ length: 2 }).map((_, i) => (
+   230→          <div key={i} className="glass-card p-6 h-80 animate-pulse" />
+   231→        ))}
+   232→      </div>
+   233→    </div>
+   234→  )
+   235→}
+   236→
+   237→// ---------- Error state ----------
+   238→function DashboardError({ message }: { message: string }) {
+   239→  return (
+   240→    <div className="glass-card p-10 text-center">
+   241→      <div className="w-14 h-14 mx-auto rounded-full bg-red-500/15 flex items-center justify-center mb-4">
+   242→        <XCircle className="w-7 h-7 text-red-400" />
+   243→      </div>
+   244→      <p className="text-white/80 font-medium">Ralat memuatkan papan pemuka</p>
+   245→      <p className="text-sm text-white/50 mt-1">{message}</p>
+   246→    </div>
+   247→  )
+   248→}
+   249→
+   250→// ---------- USER DASHBOARD ----------
+   251→function UserDashboard({ data }: { data: UserDashboard }) {
+   252→  const { viewBooking, startBooking, setView } = useAppStore()
+   253→  const { stats, upcomingBookings } = data
+   254→
+   255→  const cards = [
+   256→    { icon: FileText, label: "Jumlah Tempahan", value: stats.totalBookings, gradient: "linear-gradient(135deg, #14B8A6, #0d9488)", onClick: () => setView("my-bookings") },
+   257→    { icon: Clock, label: "Menunggu", value: stats.pending, gradient: "linear-gradient(135deg, #64748b, #475569)", onClick: () => setView("my-bookings") },
+   258→    { icon: CheckCircle2, label: "Diluluskan", value: stats.approved, gradient: "linear-gradient(135deg, #22C55E, #16a34a)", onClick: () => setView("my-bookings") },
+   259→    { icon: XCircle, label: "Ditolak", value: stats.rejected, gradient: "linear-gradient(135deg, #EF4444, #dc2626)", onClick: () => setView("my-bookings") },
+   260→  ]
+   261→
+   262→  return (
+   263→    <div className="space-y-6">
+   264→      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
+   265→        {cards.map((c, i) => (
+   266→          <StatCard key={c.label} {...c} index={i} />
+   267→        ))}
+   268→      </div>
+   269→
+   270→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+   271→        <SectionCard
+   272→          title="Tempahan Akan Datang"
+   273→          icon={CalendarCheck}
+   274→          className="lg:col-span-2"
+   275→          action={
+   276→            <button
+   277→              onClick={() => setView("my-bookings")}
+   278→              className="text-xs text-[#14B8A6] hover:text-[#14B8A6]/80 flex items-center gap-1"
+   279→            >
+   280→              Lihat Semua <ArrowRight className="w-3 h-3" />
+   281→            </button>
+   282→          }
+   283→        >
+   284→          {upcomingBookings.length === 0 ? (
+   285→            <div className="text-center py-10">
+   286→              <CalendarCheck className="w-10 h-10 mx-auto text-white/20 mb-3" />
+   287→              <p className="text-white/60 text-sm">Tiada tempahan akan datang</p>
+   288→              <button
+   289→                onClick={() => startBooking()}
+   290→                className="mt-4 text-sm text-[#14B8A6] hover:underline"
+   291→              >
+   292→                Buat Tempahan Baharu
+   293→              </button>
+   294→            </div>
+   295→          ) : (
+   296→            <div className="space-y-3 max-h-96 overflow-y-auto custom-scrollbar pr-1">
+   297→              {upcomingBookings.map((b, i) => (
+   298→                <motion.button
+   299→                  key={b.id}
+   300→                  initial={{ opacity: 0, x: -10 }}
+   301→                  animate={{ opacity: 1, x: 0 }}
+   302→                  transition={{ delay: i * 0.05 }}
+   303→                  onClick={() => viewBooking(b.id)}
+   304→                  className="w-full text-left glass-light p-4 rounded-xl hover:bg-white/10 transition-colors flex items-center gap-4"
+   305→                >
+   306→                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#14B8A6]/20 to-[#0F4C81]/20 border border-white/10 flex flex-col items-center justify-center flex-shrink-0">
+   307→                    <span className="text-xs text-white/60 leading-none">
+   308→                      {new Date(b.startTime).toLocaleDateString("ms-MY", { month: "short" })}
+   309→                    </span>
+   310→                    <span className="text-lg font-bold text-white leading-none mt-0.5">
+   311→                      {new Date(b.startTime).getDate()}
+   312→                    </span>
+   313→                  </div>
+   314→                  <div className="flex-1 min-w-0">
+   315→                    <p className="font-medium text-white truncate">{b.title}</p>
+   316→                    <p className="text-sm text-white/60 truncate">{b.facility.name}</p>
+   317→                    <p className="text-xs text-white/40 mt-0.5">
+   318→                      {formatTimeRange(b.startTime, b.endTime)}
+   319→                    </p>
+   320→                  </div>
+   321→                  <StatusBadge status={b.status} />
+   322→                </motion.button>
+   323→              ))}
+   324→            </div>
+   325→          )}
+   326→        </SectionCard>
+   327→
+   328→        <SectionCard title="Tindakan Pantas" icon={Activity}>
+   329→          <div className="space-y-3">
+   330→            <button
+   331→              onClick={() => startBooking()}
+   332→              className="w-full glass-light hover:bg-white/10 transition-colors p-4 rounded-xl text-left flex items-center gap-3"
+   333→            >
+   334→              <div className="w-10 h-10 rounded-lg bg-[#14B8A6]/20 flex items-center justify-center">
+   335→                <CalendarCheck className="w-5 h-5 text-[#14B8A6]" />
+   336→              </div>
+   337→              <div>
+   338→                <p className="text-sm font-medium text-white">Tempah Fasiliti</p>
+   339→                <p className="text-xs text-white/50">Buat permohonan baharu</p>
+   340→              </div>
+   341→            </button>
+   342→            <button
+   343→              onClick={() => setView("facilities")}
+   344→              className="w-full glass-light hover:bg-white/10 transition-colors p-4 rounded-xl text-left flex items-center gap-3"
+   345→            >
+   346→              <div className="w-10 h-10 rounded-lg bg-[#0F4C81]/30 flex items-center justify-center">
+   347→                <Building2 className="w-5 h-5 text-[#60a5fa]" />
+   348→              </div>
+   349→              <div>
+   350→                <p className="text-sm font-medium text-white">Lihat Fasiliti</p>
+   351→                <p className="text-xs text-white/50">Senarai fasiliti kampus</p>
+   352→              </div>
+   353→            </button>
+   354→            <button
+   355→              onClick={() => setView("notifications")}
+   356→              className="w-full glass-light hover:bg-white/10 transition-colors p-4 rounded-xl text-left flex items-center gap-3"
+   357→            >
+   358→              <div className="w-10 h-10 rounded-lg bg-[#F59E0B]/20 flex items-center justify-center">
+   359→                <Bell className="w-5 h-5 text-[#fbbf24]" />
+   360→              </div>
+   361→              <div>
+   362→                <p className="text-sm font-medium text-white">Notifikasi</p>
+   363→                <p className="text-xs text-white/50">Paparan notifikasi terkini</p>
+   364→              </div>
+   365→            </button>
+   366→          </div>
+   367→        </SectionCard>
+   368→      </div>
+   369→    </div>
+   370→  )
+   371→}
+   372→
+   373→// ---------- MANAGER DASHBOARD ----------
+   374→function ManagerDashboard({ data }: { data: ManagerDashboard }) {
+   375→  const { viewBooking, setView } = useAppStore()
+   376→  const { stats, pendingBookings, popularFacilities } = data
+   377→
+   378→  const cards = [
+   379→    { icon: Clock, label: "Menunggu", value: stats.pending, gradient: "linear-gradient(135deg, #64748b, #475569)", onClick: () => setView("approval-panel") },
+   380→    { icon: CheckCircle2, label: "Diluluskan", value: stats.approved, gradient: "linear-gradient(135deg, #22C55E, #16a34a)", onClick: () => setView("all-bookings") },
+   381→    { icon: Pause, label: "KIV", value: stats.kiv, gradient: "linear-gradient(135deg, #F59E0B, #d97706)", onClick: () => setView("all-bookings") },
+   382→    { icon: XCircle, label: "Ditolak", value: stats.rejected, gradient: "linear-gradient(135deg, #EF4444, #dc2626)", onClick: () => setView("all-bookings") },
+   383→    { icon: Building2, label: "Fasiliti Diurus", value: stats.managedFacilities, gradient: "linear-gradient(135deg, #14B8A6, #0d9488)", onClick: () => setView("facilities") },
+   384→  ]
+   385→
+   386→  return (
+   387→    <div className="space-y-6">
+   388→      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+   389→        {cards.map((c, i) => (
+   390→          <StatCard key={c.label} {...c} index={i} />
+   391→        ))}
+   392→      </div>
+   393→
+   394→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+   395→        <SectionCard
+   396→          title="Permohonan Menunggu Kelulusan"
+   397→          icon={Clock}
+   398→          className="lg:col-span-2"
+   399→          action={
+   400→            <button
+   401→              onClick={() => setView("approval-panel")}
+   402→              className="text-xs text-[#14B8A6] hover:text-[#14B8A6]/80 flex items-center gap-1"
+   403→            >
+   404→              Panel Kelulusan <ArrowRight className="w-3 h-3" />
+   405→            </button>
+   406→          }
+   407→        >
+   408→          {pendingBookings.length === 0 ? (
+   409→            <div className="text-center py-10">
+   410→              <CheckCircle2 className="w-10 h-10 mx-auto text-white/20 mb-3" />
+   411→              <p className="text-white/60 text-sm">Tiada permohonan menunggu</p>
+   412→            </div>
+   413→          ) : (
+   414→            <div className="space-y-3 max-h-[28rem] overflow-y-auto custom-scrollbar pr-1">
+   415→              {pendingBookings.map((b, i) => (
+   416→                <motion.div
+   417→                  key={b.id}
+   418→                  initial={{ opacity: 0, x: -10 }}
+   419→                  animate={{ opacity: 1, x: 0 }}
+   420→                  transition={{ delay: i * 0.04 }}
+   421→                  className="glass-light p-4 rounded-xl flex items-center gap-4"
+   422→                >
+   423→                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#14B8A6]/30 to-[#0F4C81]/30 border border-white/10 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+   424→                    {b.user.fullName.charAt(0).toUpperCase()}
+   425→                  </div>
+   426→                  <div className="flex-1 min-w-0">
+   427→                    <p className="font-medium text-white truncate">{b.title}</p>
+   428→                    <p className="text-sm text-white/60 truncate">
+   429→                      {b.user.fullName} · {b.facility.name}
+   430→                    </p>
+   431→                    <p className="text-xs text-white/40 mt-0.5">
+   432→                      {formatDateTime(b.startTime)}
+   433→                    </p>
+   434→                  </div>
+   435→                  <button
+   436→                    onClick={() => viewBooking(b.id)}
+   437→                    className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#14B8A6] to-[#0F4C81] text-white text-xs font-medium hover:opacity-90 transition-opacity flex items-center gap-1 flex-shrink-0"
+   438→                  >
+   439→                    Semak <ArrowRight className="w-3 h-3" />
+   440→                  </button>
+   441→                </motion.div>
+   442→              ))}
+   443→            </div>
+   444→          )}
+   445→        </SectionCard>
+   446→
+   447→        <SectionCard
+   448→          title="Fasiliti Popular"
+   449→          icon={TrendingUp}
+   450→          action={
+   451→            <button
+   452→              onClick={() => setView("facilities")}
+   453→              className="text-xs text-[#14B8A6] hover:text-[#14B8A6]/80 flex items-center gap-1"
+   454→            >
+   455→              Lihat Semua <ArrowRight className="w-3 h-3" />
+   456→            </button>
+   457→          }
+   458→        >
+   459→          {popularFacilities.length === 0 ? (
+   460→            <div className="text-center py-10">
+   461→              <Building2 className="w-10 h-10 mx-auto text-white/20 mb-3" />
+   462→              <p className="text-white/60 text-sm">Tiada fasiliti diurus</p>
+   463→            </div>
+   464→          ) : (
+   465→            <div className="space-y-3">
+   466→              {popularFacilities.map((f, i) => {
+   467→                const maxCount = Math.max(...popularFacilities.map((p) => p._count.bookings), 1)
+   468→                const pct = Math.round((f._count.bookings / maxCount) * 100)
+   469→                return (
+   470→                  <motion.div
+   471→                    key={f.id}
+   472→                    initial={{ opacity: 0, y: 8 }}
+   473→                    animate={{ opacity: 1, y: 0 }}
+   474→                    transition={{ delay: i * 0.05 }}
+   475→                    className="glass-light p-3 rounded-xl"
+   476→                  >
+   477→                    <div className="flex items-center justify-between mb-2">
+   478→                      <div className="min-w-0">
+   479→                        <p className="text-sm font-medium text-white truncate">{f.name}</p>
+   480→                        <p className="text-xs text-white/40">{f.category}</p>
+   481→                      </div>
+   482→                      <span className="text-sm font-bold text-[#14B8A6] flex-shrink-0 ml-2">
+   483→                        {f._count.bookings}
+   484→                      </span>
+   485→                    </div>
+   486→                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+   487→                      <motion.div
+   488→                        initial={{ width: 0 }}
+   489→                        animate={{ width: `${pct}%` }}
+   490→                        transition={{ delay: i * 0.05 + 0.2, duration: 0.5 }}
+   491→                        className="h-full rounded-full bg-gradient-to-r from-[#14B8A6] to-[#0F4C81]"
+   492→                      />
+   493→                    </div>
+   494→                  </motion.div>
+   495→                )
+   496→              })}
+   497→            </div>
+   498→          )}
+   499→        </SectionCard>
+   500→      </div>
+   501→    </div>
+   502→  )
+   503→}
+   504→
+   505→// ---------- ADMIN DASHBOARD ----------
+   506→function ChartTooltip({ active, payload, label }: any) {
+   507→  if (!active || !payload || !payload.length) return null
+   508→  return (
+   509→    <div className="glass-strong rounded-lg px-3 py-2 text-xs">
+   510→      {label && <p className="text-white/80 font-medium mb-1">{label}</p>}
+   511→      {payload.map((p: any, i: number) => (
+   512→        <p key={i} className="text-white/70">
+   513→          <span
+   514→            className="inline-block w-2 h-2 rounded-full mr-2 align-middle"
+   515→            style={{ background: p.color || p.payload?.fill }}
+   516→          />
+   517→          {p.name}: <span className="text-white font-semibold">{p.value}</span>
+   518→        </p>
+   519→      ))}
+   520→    </div>
+   521→  )
+   522→}
+   523→
+   524→function AdminDashboard({ data }: { data: AdminDashboard }) {
+   525→  const { viewBooking, setView } = useAppStore()
+   526→  const { stats, recentBookings, facilitiesByCategory, bookingsByStatus, usersByRole } = data
+   527→
+   528→  const cards = [
+   529→    { icon: Users, label: "Jumlah Pengguna", value: stats.totalUsers, gradient: "linear-gradient(135deg, #14B8A6, #0d9488)", onClick: () => setView("user-management") },
+   530→    { icon: Building2, label: "Jumlah Fasiliti", value: stats.totalFacilities, gradient: "linear-gradient(135deg, #0F4C81, #1e3a8a)", onClick: () => setView("facilities") },
+   531→    { icon: FileText, label: "Jumlah Tempahan", value: stats.totalBookings, gradient: "linear-gradient(135deg, #F59E0B, #d97706)", onClick: () => setView("all-bookings") },
+   532→    { icon: Clock, label: "Menunggu", value: stats.pending, gradient: "linear-gradient(135deg, #64748b, #475569)", onClick: () => setView("approval-panel") },
+   533→    { icon: CheckCircle2, label: "Diluluskan", value: stats.approved, gradient: "linear-gradient(135deg, #22C55E, #16a34a)", onClick: () => setView("all-bookings") },
+   534→    { icon: Pause, label: "KIV", value: stats.kiv, gradient: "linear-gradient(135deg, #F59E0B, #b45309)", onClick: () => setView("all-bookings") },
+   535→    { icon: XCircle, label: "Ditolak", value: stats.rejected, gradient: "linear-gradient(135deg, #EF4444, #dc2626)", onClick: () => setView("all-bookings") },
+   536→    { icon: Ban, label: "Dibatalkan", value: stats.cancelled, gradient: "linear-gradient(135deg, #6b7280, #4b5563)", onClick: () => setView("all-bookings") },
+   537→  ]
+   538→
+   539→  const statusPieData = bookingsByStatus.map((s) => ({
+   540→    name: getStatusLabel(s.status),
+   541→    value: s._count,
+   542→    status: s.status,
+   543→  }))
+   544→
+   545→  const categoryBarData = facilitiesByCategory.map((c) => ({
+   546→    name: c.category,
+   547→    Bil: c._count,
+   548→  }))
+   549→
+   550→  const rolePieData = usersByRole.map((r) => ({
+   551→    name: getRoleLabel(r.role),
+   552→    value: r._count,
+   553→  }))
+   554→
+   555→  return (
+   556→    <div className="space-y-6">
+   557→      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+   558→        {cards.map((c, i) => (
+   559→          <StatCard key={c.label} {...c} index={i} />
+   560→        ))}
+   561→      </div>
+   562→
+   563→      {/* Charts row */}
+   564→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+   565→        <SectionCard title="Tempahan Mengikut Status" icon={PieChartIcon}>
+   566→          {statusPieData.length === 0 ? (
+   567→            <div className="h-64 flex items-center justify-center text-white/40 text-sm">
+   568→              Tiada data
+   569→            </div>
+   570→          ) : (
+   571→            <div className="h-64">
+   572→              <ResponsiveContainer width="100%" height="100%">
+   573→                <PieChart>
+   574→                  <Pie
+   575→                    data={statusPieData}
+   576→                    dataKey="value"
+   577→                    nameKey="name"
+   578→                    cx="50%"
+   579→                    cy="50%"
+   580→                    innerRadius={50}
+   581→                    outerRadius={85}
+   582→                    paddingAngle={3}
+   583→                    stroke="rgba(255,255,255,0.15)"
+   584→                  >
+   585→                    {statusPieData.map((_, i) => (
+   586→                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+   587→                    ))}
+   588→                  </Pie>
+   589→                  <Tooltip content={<ChartTooltip />} />
+   590→                  <Legend
+   591→                    verticalAlign="bottom"
+   592→                    height={36}
+   593→                    iconType="circle"
+   594→                    formatter={(v) => <span className="text-white/70 text-xs">{v}</span>}
+   595→                  />
+   596→                </PieChart>
+   597→              </ResponsiveContainer>
+   598→            </div>
+   599→          )}
+   600→        </SectionCard>
+   601→
+   602→        <SectionCard title="Fasiliti Mengikut Kategori" icon={BarChart3}>
+   603→          {categoryBarData.length === 0 ? (
+   604→            <div className="h-64 flex items-center justify-center text-white/40 text-sm">
+   605→              Tiada data
+   606→            </div>
+   607→          ) : (
+   608→            <div className="h-64">
+   609→              <ResponsiveContainer width="100%" height="100%">
+   610→                <BarChart data={categoryBarData} margin={{ top: 8, right: 8, left: -18, bottom: 8 }}>
+   611→                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+   612→                  <XAxis
+   613→                    dataKey="name"
+   614→                    tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 10 }}
+   615→                    interval={0}
+   616→                    angle={-15}
+   617→                    textAnchor="end"
+   618→                    height={50}
+   619→                  />
+   620→                  <YAxis
+   621→                    tick={{ fill: "rgba(255,255,255,0.6)", fontSize: 11 }}
+   622→                    allowDecimals={false}
+   623→                  />
+   624→                  <Tooltip content={<ChartTooltip />} cursor={{ fill: "rgba(255,255,255,0.05)" }} />
+   625→                  <Bar dataKey="Bil" radius={[6, 6, 0, 0]}>
+   626→                    {categoryBarData.map((_, i) => (
+   627→                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+   628→                    ))}
+   629→                  </Bar>
+   630→                </BarChart>
+   631→              </ResponsiveContainer>
+   632→            </div>
+   633→          )}
+   634→        </SectionCard>
+   635→
+   636→        <SectionCard title="Pengguna Mengikut Peranan" icon={Users}>
+   637→          {rolePieData.length === 0 ? (
+   638→            <div className="h-64 flex items-center justify-center text-white/40 text-sm">
+   639→              Tiada data
+   640→            </div>
+   641→          ) : (
+   642→            <div className="h-64">
+   643→              <ResponsiveContainer width="100%" height="100%">
+   644→                <PieChart>
+   645→                  <Pie
+   646→                    data={rolePieData}
+   647→                    dataKey="value"
+   648→                    nameKey="name"
+   649→                    cx="50%"
+   650→                    cy="50%"
+   651→                    outerRadius={85}
+   652→                    paddingAngle={3}
+   653→                    stroke="rgba(255,255,255,0.15)"
+   654→                    label={(entry: any) => `${entry.value}`}
+   655→                    labelLine={false}
+   656→                  >
+   657→                    {rolePieData.map((_, i) => (
+   658→                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+   659→                    ))}
+   660→                  </Pie>
+   661→                  <Tooltip content={<ChartTooltip />} />
+   662→                  <Legend
+   663→                    verticalAlign="bottom"
+   664→                    height={36}
+   665→                    iconType="circle"
+   666→                    formatter={(v) => <span className="text-white/70 text-xs">{v}</span>}
+   667→                  />
+   668→                </PieChart>
+   669→              </ResponsiveContainer>
+   670→            </div>
+   671→          )}
+   672→        </SectionCard>
+   673→      </div>
+   674→
+   675→      {/* Recent bookings table */}
+   676→      <SectionCard
+   677→        title="Tempahan Terkini"
+   678→        icon={FileText}
+   679→        action={
+   680→          <button
+   681→            onClick={() => setView("all-bookings")}
+   682→            className="text-xs text-[#14B8A6] hover:text-[#14B8A6]/80 flex items-center gap-1"
+   683→          >
+   684→            Lihat Semua <ArrowRight className="w-3 h-3" />
+   685→          </button>
+   686→        }
+   687→      >
+   688→        <div className="overflow-x-auto custom-scrollbar -mx-2">
+   689→          <table className="w-full text-sm">
+   690→            <thead>
+   691→              <tr className="text-left text-white/50 text-xs uppercase tracking-wider">
+   692→                <th className="px-2 py-2 font-medium">Tajuk</th>
+   693→                <th className="px-2 py-2 font-medium">Pemohon</th>
+   694→                <th className="px-2 py-2 font-medium hidden md:table-cell">Fasiliti</th>
+   695→                <th className="px-2 py-2 font-medium hidden lg:table-cell">Tarikh</th>
+   696→                <th className="px-2 py-2 font-medium text-right">Status</th>
+   697→              </tr>
+   698→            </thead>
+   699→            <tbody>
+   700→              {recentBookings.length === 0 ? (
+   701→                <tr>
+   702→                  <td colSpan={5} className="px-2 py-8 text-center text-white/40">
+   703→                    Tiada tempahan
+   704→                  </td>
+   705→                </tr>
+   706→              ) : (
+   707→                recentBookings.map((b, i) => (
+   708→                  <motion.tr
+   709→                    key={b.id}
+   710→                    initial={{ opacity: 0 }}
+   711→                    animate={{ opacity: 1 }}
+   712→                    transition={{ delay: i * 0.03 }}
+   713→                    onClick={() => viewBooking(b.id)}
+   714→                    className="border-t border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
+   715→                  >
+   716→                    <td className="px-2 py-3">
+   717→                      <p className="font-medium text-white truncate max-w-[12rem]">{b.title}</p>
+   718→                    </td>
+   719→                    <td className="px-2 py-3">
+   720→                      <p className="text-white/80 truncate max-w-[10rem]">{b.user.fullName}</p>
+   721→                      <p className="text-xs text-white/40 truncate max-w-[10rem]">{b.user.department}</p>
+   722→                    </td>
+   723→                    <td className="px-2 py-3 text-white/70 hidden md:table-cell truncate max-w-[10rem]">
+   724→                      {b.facility.name}
+   725→                    </td>
+   726→                    <td className="px-2 py-3 text-white/60 hidden lg:table-cell whitespace-nowrap text-xs">
+   727→                      {formatDate(b.startTime)}
+   728→                    </td>
+   729→                    <td className="px-2 py-3 text-right">
+   730→                      <StatusBadge status={b.status} />
+   731→                    </td>
+   732→                  </motion.tr>
+   733→                ))
+   734→              )}
+   735→            </tbody>
+   736→          </table>
+   737→        </div>
+   738→      </SectionCard>
+   739→    </div>
+   740→  )
+   741→}
+   742→
+   743→// ---------- MAIN ----------
+   744→export function DashboardView() {
+   745→  const { data: session } = useSession()
+   746→  const { data, isLoading, isError, error, refetch } = useQuery({
+   747→    queryKey: ["dashboard-stats"],
+   748→    queryFn: fetchDashboardStats,
+   749→    refetchInterval: 60000,
+   750→    enabled: !!session,
+   751→  })
+   752→
+   753→  const role = session?.user?.role || "user"
+   754→
+   755→  return (
+   756→    <div className="space-y-6">
+   757→      <motion.div
+   758→        initial={{ opacity: 0, y: -8 }}
+   759→        animate={{ opacity: 1, y: 0 }}
+   760→        className="flex flex-col md:flex-row md:items-center md:justify-between gap-2"
+   761→      >
+   762→        <div>
+   763→          <h2 className="text-2xl md:text-3xl font-bold gradient-text">
+   764→            Selamat datang, {session?.user?.name?.split(" ")[0] || "Pengguna"}!
+   765→          </h2>
+   766→          <p className="text-sm text-white/60 mt-1">
+   767→            {role === "admin"
+   768→              ? "Pusat pentadbiran sistem SiTempah"
+   769→              : role === "manager"
+   770→              ? "Urus fasiliti dan permohonan anda"
+   771→              : "Tempah dan urus fasiliti kampus"}
+   772→          </p>
+   773→        </div>
+   774→        {isError && (
+   775→          <button
+   776→            onClick={() => refetch()}
+   777→            className="text-sm text-[#14B8A6] hover:text-[#14B8A6]/80 flex items-center gap-1"
+   778→          >
+   779→            <Loader2 className="w-3.5 h-3.5" /> Cuba semula
+   780→          </button>
+   781→        )}
+   782→      </motion.div>
+   783→
+   784→      {isLoading ? (
+   785→        <DashboardLoading />
+   786→      ) : isError ? (
+   787→        <DashboardError message={(error as Error)?.message || "Sila cuba lagi."} />
+   788→      ) : !data ? (
+   789→        <DashboardError message="Tiada data diterima." />
+   790→      ) : data.role === "user" ? (
+   791→        <UserDashboard data={data} />
+   792→      ) : data.role === "manager" ? (
+   793→        <ManagerDashboard data={data} />
+   794→      ) : (
+   795→        <AdminDashboard data={data} />
+   796→      )}
+   797→    </div>
+   798→  )
+   799→}
+   800→

@@ -1,0 +1,141 @@
+// SiTempah - Sistem Tempahan Fasiliti Gunasama
+// ADTEC JTM Kampus Batu Pahat
+// Prisma Schema with SQLite
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  fullName     String
+  department   String
+  phoneNumber  String?
+  role         String   @default("user") // user, manager, admin
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  bookings           Booking[]               @relation("UserBookings")
+  reviewedBookings   Booking[]               @relation("ReviewerBookings")
+  managedFacilities  Facility[]
+  statusChanges      BookingStatusHistory[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+
+  @@index([role])
+}
+
+model Facility {
+  id             String   @id @default(cuid())
+  name           String
+  category       String
+  capacity       Int
+  location       String
+  description    String
+  amenities      String   @default("[]") // JSON array stored as string
+  imageUrl       String?
+  managerId      String?
+  isActive       Boolean  @default(true)
+  operatingHours String   @default("{}") // JSON stored as string
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  manager  User?      @relation(fields: [managerId], references: [id])
+  bookings Booking[]
+
+  @@index([category])
+  @@index([managerId])
+  @@index([isActive])
+}
+
+model Booking {
+  id             String    @id @default(cuid())
+  facilityId     String
+  userId         String
+  title          String
+  startTime      DateTime
+  endTime        DateTime
+  attendeesCount Int
+  purposeNotes   String
+  attachmentUrl  String?
+  status         String    @default("pending") // draft, pending, kiv, approved, rejected, cancelled, expired
+  reviewedBy     String?
+  reviewNotes    String?
+  reviewedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  facility      Facility                 @relation(fields: [facilityId], references: [id])
+  user          User                     @relation("UserBookings", fields: [userId], references: [id])
+  reviewer      User?                    @relation("ReviewerBookings", fields: [reviewedBy], references: [id])
+  statusHistory BookingStatusHistory[]
+  notifications Notification[]
+
+  @@index([facilityId])
+  @@index([userId])
+  @@index([status])
+  @@index([startTime])
+  @@index([endTime])
+}
+
+model BookingStatusHistory {
+  id        String   @id @default(cuid())
+  bookingId String
+  oldStatus String?
+  newStatus String
+  changedBy String
+  notes     String?
+  changedAt DateTime @default(now())
+
+  // Relations
+  booking  Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  changedByUser User @relation(fields: [changedBy], references: [id])
+
+  @@index([bookingId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  bookingId String?
+  message   String
+  type      String   @default("info") // info, success, warning, danger
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  details   String
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+}

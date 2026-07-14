@@ -1,0 +1,583 @@
+     1→=== PAGE 1 ===
+     2→JABATAN TENAGA MANUSIA (JTM)
+     3→Kementerian Sumber Manusia Malaysia
+     4→Product Requirements Document (PRD)
+     5→Sistem Tempahan Fasiliti Gunasama (SiTempah)
+     6→Dikuasakan oleh Z.AI (Model GLM 5.2) (cid:127) Supabase (cid:127) Netlify
+     7→Reka Bentuk UI/UX: Glassmorphism
+     8→Versi 1.0 | Julai 2026 | Dokumen Dalaman — Perancangan Pembangunan Sistem
+     9→
+    10→=== PAGE 2 ===
+    11→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+    12→1. Maklumat Kawalan Dokumen
+    13→Nama Sistem Sistem Tempahan Fasiliti Gunasama (SiTempah)
+    14→Organisasi Jabatan Tenaga Manusia (JTM), Kementerian Sumber Manusia Malaysia
+    15→Versi Dokumen 1.0
+    16→Tarikh 14 Julai 2026
+    17→Status Draf untuk Kelulusan / Draft for Approval
+    18→Model AI Pembangunan Z.AI — GLM 5.2 (AI Coding Assistant)
+    19→Pangkalan Data Supabase (PostgreSQL, Auth, Storage, Realtime)
+    20→Platform Pelan Guna Pakai Netlify (Hosting & CI/CD)
+    21→Reka Bentuk Antara Muka Modern UI/UX — Glassmorphism Design System
+    22→Klasifikasi Sulit — Untuk Kegunaan Dalaman JTM Sahaja
+    23→Dokumen ini menggariskan keperluan produk (Product Requirements) secara menyeluruh bagi pembangunan
+    24→Sistem Tempahan Fasiliti Gunasama (SiTempah) untuk kegunaan Jabatan Tenaga Manusia (JTM). Dokumen ini
+    25→bertujuan menjadi rujukan utama bagi pasukan pembangunan (development team) yang menggunakan bantuan AI
+    26→coding assistant Z.AI (model GLM 5.2), dengan seni bina backend berasaskan Supabase dan penempatan
+    27→(deployment) di Netlify.
+    28→2. Sejarah Semakan (Revision History)
+    29→Versi Tarikh Perihal Perubahan Disediakan Oleh
+    30→0.1 2026-07-10 Draf awal skop dan keperluan Pasukan Analisis Sistem
+    31→1.0 2026-07-14 PRD lengkap — kelulusan dalaman Pasukan Analisis Sistem
+    32→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 2
+    33→
+    34→=== PAGE 3 ===
+    35→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+    36→3. Latar Belakang dan Pernyataan Masalah
+    37→Pada masa ini, proses tempahan fasiliti gunasama di JTM seperti bilik mesyuarat, dewan, makmal komputer dan
+    38→bilik seminar dijalankan secara manual melalui borang fizikal, e-mel atau panggilan telefon kepada kerani/pengurus
+    39→fasiliti. Pendekatan ini menimbulkan beberapa isu operasi:
+    40→(cid:127) (cid:127) Pertindihan tempahan (double booking) akibat ketiadaan paparan kekosongan fasiliti secara masa nyata
+    41→(real-time).
+    42→(cid:127) (cid:127) Proses kelulusan yang perlahan dan tidak telus kerana bergantung kepada komunikasi tidak berstruktur
+    43→(e-mel/WhatsApp).
+    44→(cid:127) (cid:127) Sukar untuk pemohon menyemak status permohonan tanpa perlu bertanya secara manual kepada pengurus.
+    45→(cid:127) (cid:127) Ketiadaan rekod berpusat (centralised record) bagi tujuan audit, pelaporan dan analisis penggunaan fasiliti.
+    46→(cid:127) (cid:127) Pengalaman pengguna (UX) borang sedia ada yang lapuk dan tidak mesra pengguna.
+    47→Justeru, JTM bercadang membangunkan sebuah sistem web bersepadu — SiTempah — yang membolehkan
+    48→tempahan fasiliti gunasama dilakukan secara dalam talian (online), dengan aliran kerja kelulusan berstruktur
+    49→(structured approval workflow) serta paparan status tempahan secara telus kepada semua pihak berkepentingan.
+    50→4. Objektif Sistem
+    51→(cid:127) (cid:127) Menyediakan platform tempahan fasiliti gunasama secara dalam talian yang mudah diakses, responsif dan
+    52→selamat.
+    53→(cid:127) (cid:127) Mengautomasikan aliran kerja kelulusan permohonan (Approve / KIV / Reject) oleh Pengurus fasiliti.
+    54→(cid:127) (cid:127) Memberi paparan kekosongan (availability) fasiliti secara masa nyata bagi mengelakkan pertindihan tempahan.
+    55→(cid:127) (cid:127) Membolehkan semua peranan (Pengguna, Pengurus, Pentadbir) menyemak status dan sejarah permohonan
+    56→pada bila-bila masa.
+    57→(cid:127) (cid:127) Menyediakan rekod digital berpusat untuk tujuan pelaporan, audit dan penambahbaikan berterusan.
+    58→(cid:127) (cid:127) Menawarkan pengalaman pengguna moden dengan reka bentuk Glassmorphism yang menarik, ringan dan
+    59→intuitif.
+    60→5. Skop Projek
+    61→5.1 Dalam Skop (In-Scope)
+    62→(cid:127) (cid:127) Modul Pengurusan Fasiliti (senarai, butiran, gambar, kapasiti, kemudahan/peralatan).
+    63→(cid:127) (cid:127) Modul Tempahan (semakan kekosongan melalui kalendar, borang tempahan, tempahan berulang asas).
+    64→(cid:127) (cid:127) Modul Aliran Kerja Kelulusan (Approve, KIV / Kept-In-View, Reject) oleh Pengurus.
+    65→(cid:127) (cid:127) Modul Semakan Status Permohonan untuk semua peranan (Pengguna, Pengurus, Pentadbir).
+    66→(cid:127) (cid:127) Modul Pengurusan Pengguna dan Kebenaran Akses (Role-Based Access Control).
+    67→(cid:127) (cid:127) Modul Notifikasi (e-mel/dalam-sistem) apabila status permohonan berubah.
+    68→(cid:127) (cid:127) Modul Pelaporan dan Papan Pemuka (Dashboard) ringkas bagi Pengurus dan Pentadbir.
+    69→(cid:127) (cid:127) Reka bentuk antara muka Glassmorphism yang responsif (desktop, tablet, mobile).
+    70→5.2 Luar Skop (Out-of-Scope) — Fasa 1
+    71→(cid:127) (cid:127) Integrasi pembayaran (payment gateway) — fasiliti JTM tidak dikenakan bayaran sewaan pada Fasa 1.
+    72→(cid:127) (cid:127) Integrasi terus dengan sistem HRMIS/Single Sign-On kementerian (dicadangkan untuk Fasa 2).
+    73→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 3
+    74→
+    75→=== PAGE 4 ===
+    76→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+    77→(cid:127) (cid:127) Aplikasi mudah alih native (iOS/Android) — sistem Fasa 1 tertumpu kepada aplikasi web responsif
+    78→(PWA-ready).
+    79→(cid:127) (cid:127) Modul pengurusan aset/inventori fasiliti secara terperinci.
+    80→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 4
+    81→
+    82→=== PAGE 5 ===
+    83→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+    84→6. Peranan Pengguna (User Roles) dan Kebenaran Akses
+    85→Sistem menyokong tiga (3) peranan utama dengan kebenaran capaian (permission) yang berbeza, dikuatkuasakan
+    86→melalui Role-Based Access Control (RBAC) dan Row Level Security (RLS) pada peringkat Supabase.
+    87→Peranan Penerangan Kebenaran Utama
+    88→Pengguna Kakitangan JTM yang membuat tempahan (cid:127) Daftar & log masuk akaun
+    89→(User) fasiliti untuk kegunaan aktiviti/mesyuarat (cid:127) Lihat kekosongan fasiliti (kalendar)
+    90→unit masing-masing. (cid:127) Buat permohonan tempahan
+    91→(cid:127) Lihat & batal tempahan sendiri
+    92→(cid:127) Semak status permohonan sendiri & keseluruhan
+    93→Pengurus Bertanggungjawab menyemak dan (cid:127) Semua kebenaran Pengguna
+    94→(Manager) meluluskan permohonan tempahan bagi (cid:127) Lulus (Approve) permohonan
+    95→fasiliti di bawah tanggungjawabnya. (cid:127) Tanda KIV (Kept-In-View)
+    96→(cid:127) Tolak (Reject) permohonan berserta catatan
+    97→sebab
+    98→(cid:127) Lihat semua permohonan & jana laporan ringkas
+    99→Pentadbir Mengurus keseluruhan sistem termasuk (cid:127) Semua kebenaran Pengurus
+   100→(Admin) data induk fasiliti, pengguna dan (cid:127) Urus data fasiliti (CRUD)
+   101→konfigurasi sistem. (cid:127) Urus pengguna & peranan
+   102→(cid:127) Lihat log audit & laporan penuh
+   103→(cid:127) Konfigurasi sistem (waktu operasi, kategori, dll.)
+   104→7. Senarai Fasiliti Gunasama (Data Induk Awal)
+   105→Berikut adalah senarai awal fasiliti gunasama yang akan didaftarkan dalam sistem. Senarai ini dikonfigurasikan
+   106→sebagai data induk (master data) yang boleh ditambah, dikemas kini atau dinyahaktifkan oleh Pentadbir melalui
+   107→modul Pengurusan Fasiliti — tanpa memerlukan sebarang perubahan kod (no-code configuration).
+   108→Nama Fasiliti Kategori Anggaran Contoh Kemudahan
+   109→Kapasiti
+   110→Bilik Mesyuarat Bilik Mesyuarat 10–20 orang Skrin, projektor, papan putih
+   111→Bilik Perbincangan Bilik Perbincangan 4–8 orang TV paparan, meja bulat
+   112→Makmal Komputer Makmal 20–30 orang Komputer, projektor, capaian internet
+   113→Dewan Seri Nilam Dewan Utama 150–300 orang Sistem PA, pentas, kerusi teater
+   114→Dewan Seri Intan Dewan Utama 150–300 orang Sistem PA, pentas, kerusi teater
+   115→Bilik Seminar Zamrud Bilik Seminar 40–60 orang Projektor, sistem audio
+   116→Bilik Seminar Delima Bilik Seminar 40–60 orang Projektor, sistem audio
+   117→Lain-lain (konfigurasi Ditentukan oleh Ditentukan oleh Ditentukan oleh Admin
+   118→terbuka) Admin Admin
+   119→Nota: Setiap rekod fasiliti turut menyimpan medan lokasi/bangunan, status aktif/tidak aktif, gambar fasiliti, waktu operasi dibenarkan,
+   120→dan Pengurus yang bertanggungjawab (person-in-charge) bagi tujuan penghalaan (routing) permohonan kelulusan.
+   121→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 5
+   122→
+   123→=== PAGE 6 ===
+   124→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   125→8. Keperluan Fungsian (Functional Requirements)
+   126→8.1 Modul Pengurusan Fasiliti
+   127→ID Keperluan Penerangan Keutamaa
+   128→n
+   129→FR-01 Senarai Fasiliti Sistem memaparkan senarai semua fasiliti gunasama Wajib
+   130→berserta kategori, kapasiti dan status kekosongan.
+   131→FR-02 Butiran Fasiliti Pengguna boleh melihat butiran penuh fasiliti termasuk Wajib
+   132→gambar, kemudahan, lokasi dan peraturan penggunaan.
+   133→FR-03 CRUD Fasiliti Pentadbir boleh menambah, mengemas kini, menyahaktifkan Wajib
+   134→(Admin) atau memadam fasiliti dan memuat naik gambar.
+   135→8.2 Modul Semakan Kekosongan & Tempahan
+   136→ID Keperluan Penerangan Keutamaa
+   137→n
+   138→FR-04 Paparan Kalendar Pengguna boleh melihat kekosongan fasiliti mengikut Wajib
+   139→Kekosongan hari/minggu/bulan dalam bentuk kalendar visual sebelum
+   140→membuat tempahan.
+   141→FR-05 Semakan Konflik Sistem menyemak pertindihan slot masa secara automatik Wajib
+   142→Masa Nyata dan menghalang tempahan bertindih bagi fasiliti dan slot
+   143→yang sama.
+   144→FR-06 Borang Tempahan Pengguna mengisi borang tempahan: fasiliti, tarikh, masa Wajib
+   145→mula/tamat, tujuan, bilangan peserta, keperluan tambahan.
+   146→FR-07 Muat Naik Lampiran Pengguna boleh memuat naik dokumen sokongan (contoh: Baik Ada
+   147→surat kelulusan aktiviti) semasa membuat permohonan.
+   148→FR-08 Batal / Pinda Pengguna boleh membatalkan atau meminda tempahan Wajib
+   149→Tempahan sebelum diluluskan; tempahan yang telah diluluskan
+   150→memerlukan justifikasi pembatalan.
+   151→8.3 Modul Aliran Kerja Kelulusan (Approval Workflow)
+   152→ID Keperluan Penerangan Keutamaa
+   153→n
+   154→FR-09 Senarai Pengurus melihat senarai permohonan berstatus 'Menunggu Wajib
+   155→Permohonan Kelulusan' bagi fasiliti di bawah tanggungjawabnya.
+   156→Menunggu
+   157→FR-10 Tindakan Lulus / Pengurus boleh menukar status permohonan kepada Wajib
+   158→KIV / Tolak Diluluskan, KIV (Kept-In-View), atau Ditolak berserta
+   159→catatan/ulasan.
+   160→FR-11 Sejarah Tindakan Setiap perubahan status direkodkan dengan cap masa, Wajib
+   161→(Audit Trail) pelaku tindakan dan catatan untuk tujuan audit.
+   162→FR-12 Notifikasi Automatik Pemohon menerima notifikasi (e-mel & dalam-sistem) apabila Wajib
+   163→status permohonan berubah.
+   164→8.4 Modul Semakan Status & Paparan Permohonan
+   165→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 6
+   166→
+   167→=== PAGE 7 ===
+   168→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   169→ID Keperluan Penerangan Keutamaa
+   170→n
+   171→FR-13 Papan Pemuka Pengguna melihat senarai permohonan sendiri berserta Wajib
+   172→Permohonan status semasa (Menunggu / Diluluskan / KIV / Ditolak /
+   173→Dibatalkan).
+   174→FR-14 Paparan Semua Pengurus dan Pentadbir boleh melihat, menapis (filter) dan Wajib
+   175→Permohonan mencari semua permohonan merentasi semua fasiliti dan
+   176→(Manager/Admin) pengguna.
+   177→FR-15 Penapis & Carian Semua peranan boleh menapis permohonan mengikut fasiliti, Wajib
+   178→status, julat tarikh, dan nama pemohon.
+   179→FR-16 Eksport Laporan Pengurus/Pentadbir boleh mengeksport senarai permohonan Baik Ada
+   180→ke format CSV/PDF bagi tujuan pelaporan.
+   181→8.5 Modul Pengurusan Pengguna & Keselamatan
+   182→ID Keperluan Penerangan Keutamaa
+   183→n
+   184→FR-17 Pendaftaran & Log Pengguna mendaftar/log masuk menggunakan e-mel rasmi Wajib
+   185→Masuk JTM melalui Supabase Auth (emel & kata laluan, atau pautan
+   186→ajaib).
+   187→FR-18 Urus Peranan Pentadbir boleh menetapkan/menukar peranan Wajib
+   188→Pengguna (User/Manager/Admin) dan mengaitkan Pengurus dengan
+   189→fasiliti tertentu.
+   190→FR-19 Profil Pengguna Pengguna boleh mengemas kini maklumat profil asas (nama, Baik Ada
+   191→bahagian/unit, nombor telefon).
+   192→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 7
+   193→
+   194→=== PAGE 8 ===
+   195→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   196→9. Aliran Status Permohonan (Booking Status Workflow)
+   197→Setiap permohonan tempahan akan melalui aliran status berikut. Reka bentuk status ini menyokong keperluan
+   198→Pengurus untuk meluluskan, menangguhkan (KIV) atau menolak sesuatu permohonan.
+   199→Status Penerangan Pencetus / Siapa Boleh
+   200→Ubah
+   201→Draf (Draft) Permohonan disimpan sementara sebelum dihantar rasmi. Pengguna
+   202→Menunggu Kelulusan Permohonan telah dihantar dan menunggu tindakan Sistem (auto) selepas
+   203→(Pending) Pengurus. penghantaran
+   204→KIV (Kept-In-View) Permohonan ditangguhkan buat sementara — memerlukan Pengurus
+   205→maklumat tambahan atau menunggu pengesahan lanjut.
+   206→Diluluskan (Approved) Permohonan diluluskan; fasiliti disahkan ditempah untuk slot Pengurus
+   207→berkenaan.
+   208→Ditolak (Rejected) Permohonan ditolak berserta sebab/catatan penolakan. Pengurus
+   209→Dibatalkan (Cancelled) Permohonan dibatalkan oleh pemohon sendiri sebelum tarikh Pengguna / Pentadbir
+   210→acara.
+   211→Tamat Tempoh (Expired) Permohonan automatik ditamatkan jika tiada tindakan Sistem (auto)
+   212→Pengurus selepas tempoh SLA ditetapkan.
+   213→Rajah Aliran Status (Ringkasan Teks)
+   214→Draf fi Menunggu Kelulusan fi { Diluluskan | KIV fi (Diluluskan | Ditolak) | Ditolak } ; Menunggu Kelulusan / KIV fi
+   215→Tamat Tempoh (jika SLA terlampau) ; Diluluskan fi Dibatalkan (atas permintaan pemohon).
+   216→10. Aliran Pengguna Utama (Key User Flows)
+   217→10.1 Aliran Tempahan (Pengguna)
+   218→1 (cid:127) Log masuk ke sistem menggunakan akaun e-mel rasmi JTM.
+   219→2 (cid:127) Pilih fasiliti daripada senarai / carian, atau terus ke paparan kalendar kekosongan.
+   220→3 (cid:127) Semak slot kekosongan pada kalendar (warna hijau = kosong, kuning = KIV, merah = ditempah).
+   221→4 (cid:127) Isi borang tempahan (tarikh, masa, tujuan, bilangan peserta) dan hantar permohonan.
+   222→5 (cid:127) Terima notifikasi pengesahan penghantaran (status: Menunggu Kelulusan).
+   223→6 (cid:127) Semak status permohonan pada papan pemuka 'Permohonan Saya' pada bila-bila masa.
+   224→7 (cid:127) Terima notifikasi apabila Pengurus mengambil tindakan (Diluluskan / KIV / Ditolak).
+   225→10.2 Aliran Kelulusan (Pengurus)
+   226→1 (cid:127) Log masuk dan akses 'Panel Kelulusan' — senarai permohonan Menunggu Kelulusan bagi fasiliti di bawah
+   227→tanggungjawabnya.
+   228→2 (cid:127) Buka butiran permohonan untuk semak tujuan, tarikh, masa dan lampiran (jika ada).
+   229→3 (cid:127) Pilih tindakan: Lulus, Tandakan KIV (dengan catatan), atau Tolak (dengan sebab wajib diisi).
+   230→4 (cid:127) Sistem mengemas kini status, merekod dalam audit trail, dan menghantar notifikasi kepada pemohon.
+   231→5 (cid:127) Pengurus boleh menyemak semula permohonan berstatus KIV pada bila-bila masa untuk membuat keputusan
+   232→akhir.
+   233→10.3 Aliran Semakan Status (Semua Peranan)
+   234→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 8
+   235→
+   236→=== PAGE 9 ===
+   237→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   238→1 (cid:127) Akses menu 'Semua Permohonan' (Pengurus/Pentadbir) atau 'Permohonan Saya' (Pengguna).
+   239→2 (cid:127) Tapis mengikut status, fasiliti, julat tarikh atau nama pemohon.
+   240→3 (cid:127) Klik rekod untuk melihat butiran penuh termasuk sejarah tindakan (audit trail).
+   241→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 9
+   242→
+   243→=== PAGE 10 ===
+   244→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   245→11. Keperluan Bukan Fungsian (Non-Functional Requirements)
+   246→Kategori Keperluan
+   247→Prestasi (Performance) Masa muat turun halaman < 2 saat pada rangkaian 4G/broadband standard; paparan
+   248→kalendar mesti kekal responsif dengan > 50 fasiliti dan > 5,000 rekod tempahan setahun.
+   249→Kebolehcapaian Sasaran ketersediaan sistem sekurang-kurangnya 99.5% mengikut had SLA penyedia
+   250→(Availability) Netlify/Supabase.
+   251→Keselamatan (Security) Pengesahan (authentication) melalui Supabase Auth; kawalan akses berperanan (RBAC)
+   252→dikuatkuasakan melalui Row Level Security (RLS); semua trafik disulitkan (HTTPS/TLS).
+   253→Kebolehskalaan Seni bina serverless (Netlify Functions/Edge + Supabase) membolehkan sistem berskala
+   254→(Scalability) mengikut bilangan pengguna tanpa penambahan pelayan fizikal.
+   255→Kebolehgunaan Reka bentuk Glassmorphism yang konsisten, responsif merentasi peranti
+   256→(Usability) (desktop/tablet/mobile), mematuhi prinsip aksesibiliti asas (kontras warna, saiz teks boleh
+   257→baca).
+   258→Kebolehkekalan Kod sumber diurus melalui repositori Git dengan struktur modular; skema pangkalan data
+   259→(Maintainability) didokumentasikan dan menggunakan migrasi (migrations) berversi.
+   260→Audit & Pematuhan Semua tindakan kritikal (kelulusan, penolakan, perubahan status) direkod dalam log audit
+   261→tidak boleh ubah (immutable) untuk tujuan siasatan/tadbir urus.
+   262→Kebolehpulihan (Backup Sandaran automatik pangkalan data harian melalui Supabase; keupayaan pulih
+   263→& Recovery) (point-in-time recovery) mengikut pelan langganan yang dipilih.
+   264→Penyetempatan Antara muka utama dalam Bahasa Melayu dengan pilihan Bahasa Inggeris
+   265→(Localization) (dwibahasa/bilingual) untuk fasa akan datang.
+   266→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 10
+   267→
+   268→=== PAGE 11 ===
+   269→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   270→12. Seni Bina Sistem & Timbunan Teknologi (System Architecture
+   271→& Tech Stack)
+   272→12.1 Gambaran Seni Bina
+   273→SiTempah dibangunkan menggunakan seni bina Jamstack moden yang ringan dan mudah diselenggara, sesuai
+   274→untuk pasukan kecil yang menggunakan bantuan AI coding assistant (Z.AI — model GLM 5.2) dalam proses
+   275→pembangunan.
+   276→Lapisan Teknologi / Perkhidmatan Fungsi
+   277→Antara Muka React / Next.js (atau Vite + React) dengan Paparan UI Glassmorphism, kalendar interaktif,
+   278→(Frontend) TailwindCSS, dijana/dibantu oleh Z.AI borang tempahan, papan pemuka.
+   279→GLM 5.2
+   280→Backend-as-a-Servi Supabase (PostgreSQL, Supabase Auth, Pangkalan data, pengesahan pengguna, storan fail
+   281→ce Supabase Storage, Realtime lampiran, dan kemas kini masa nyata (status
+   282→Subscriptions, Row Level Security) tempahan).
+   283→Logik Sisi Pelayan Supabase Edge Functions / Netlify Logik perniagaan kompleks: semakan konflik
+   284→(Backend Logic) Functions (Node.js/TypeScript) tempahan, penghantaran notifikasi e-mel,
+   285→penjanaan laporan.
+   286→Pengesahan Supabase Auth (E-mel & Kata Laluan / Log masuk selamat, pengurusan sesi (JWT), dan
+   287→Pengguna (Auth) Magic Link) integrasi RBAC melalui custom claims/roles table.
+   288→Notifikasi Supabase Edge Functions + Menghantar e-mel automatik apabila status
+   289→perkhidmatan e-mel (contoh: permohonan berubah.
+   290→Resend/SendGrid)
+   291→Penempatan Netlify (Continuous Deployment daripada Hosting antara muka web, CDN global, HTTPS
+   292→(Hosting) Git repository) automatik, pratonton pembangunan (deploy
+   293→previews).
+   294→Kawalan Versi Git (GitHub/GitLab) Pengurusan kod sumber dan integrasi CI/CD
+   295→dengan Netlify.
+   296→Pembantu Z.AI — Model GLM 5.2 Menjana dan membantu menulis kod
+   297→Pembangunan AI frontend/backend, komponen UI Glassmorphism,
+   298→dan skrip migrasi Supabase.
+   299→12.2 Rajah Seni Bina Tahap Tinggi (Naratif)
+   300→Pengguna berinteraksi dengan aplikasi web (React/Next.js) yang dihoskan di Netlify. Aplikasi ini berkomunikasi
+   301→secara terus dengan Supabase melalui Supabase Client SDK bagi operasi pengesahan (auth), pertanyaan
+   302→pangkalan data (query melalui PostgREST API automatik), storan fail, dan langganan masa nyata (realtime) bagi
+   303→kemas kini status tempahan. Logik perniagaan yang lebih kompleks (contoh: pengesahan konflik tempahan sebelum
+   304→simpan, penghantaran notifikasi e-mel, penjanaan laporan PDF) dikendalikan melalui Supabase Edge Functions
+   305→atau Netlify Functions. Semua akses data dikawal ketat melalui dasar Row Level Security (RLS) berdasarkan
+   306→peranan pengguna yang disahkan melalui token JWT daripada Supabase Auth.
+   307→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 11
+   308→
+   309→=== PAGE 12 ===
+   310→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   311→13. Reka Bentuk Skema Pangkalan Data (Supabase / PostgreSQL)
+   312→Berikut adalah cadangan skema jadual utama bagi pangkalan data Supabase. Semua jadual menggunakan Row
+   313→Level Security (RLS) yang diaktifkan, dengan dasar akses (policy) khusus mengikut peranan.
+   314→13.1 Jadual `profiles`
+   315→Menyimpan maklumat profil pengguna, dipautkan kepada `auth.users` Supabase.
+   316→Medan Jenis Data Penerangan
+   317→id uuid (PK, FK Merujuk kepada id pengguna dalam Supabase Auth.
+   318→auth.users)
+   319→full_name text Nama penuh pengguna.
+   320→email text E-mel rasmi JTM.
+   321→department text Bahagian/Unit pemohon.
+   322→phone_number text Nombor telefon (pilihan).
+   323→role text (enum: user, Peranan pengguna dalam sistem.
+   324→manager, admin)
+   325→created_at timestamptz Tarikh akaun dicipta.
+   326→13.2 Jadual `facilities`
+   327→Data induk fasiliti gunasama.
+   328→Medan Jenis Data Penerangan
+   329→id uuid (PK) Pengecam unik fasiliti.
+   330→name text Nama fasiliti (cth: Dewan Seri Nilam).
+   331→category text Kategori: Bilik Mesyuarat, Dewan, Makmal, Bilik Seminar, dll.
+   332→capacity integer Anggaran kapasiti maksimum.
+   333→location text Lokasi/bangunan/aras.
+   334→description text Penerangan dan peraturan penggunaan.
+   335→amenities jsonb Senarai kemudahan (projektor, PA system, dll.) dalam format JSON.
+   336→image_url text Pautan gambar fasiliti (Supabase Storage).
+   337→manager_id uuid (FK Pengurus bertanggungjawab meluluskan tempahan fasiliti ini.
+   338→profiles.id)
+   339→is_active boolean Status aktif/tidak aktif fasiliti.
+   340→operating_hours jsonb Waktu operasi dibenarkan mengikut hari.
+   341→13.3 Jadual `bookings`
+   342→Rekod utama permohonan tempahan.
+   343→Medan Jenis Data Penerangan
+   344→id uuid (PK) Pengecam unik permohonan.
+   345→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 12
+   346→
+   347→=== PAGE 13 ===
+   348→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   349→Medan Jenis Data Penerangan
+   350→facility_id uuid (FK Fasiliti yang dimohon.
+   351→facilities.id)
+   352→user_id uuid (FK Pemohon tempahan.
+   353→profiles.id)
+   354→title text Tajuk/tujuan aktiviti.
+   355→start_time timestamptz Tarikh & masa mula tempahan.
+   356→end_time timestamptz Tarikh & masa tamat tempahan.
+   357→attendees_count integer Anggaran bilangan peserta.
+   358→purpose_notes text Catatan/keperluan tambahan pemohon.
+   359→attachment_url text Pautan dokumen sokongan (pilihan).
+   360→status text (enum) draft, pending, kiv, approved, rejected, cancelled, expired.
+   361→reviewed_by uuid (FK Pengurus yang bertindak ke atas permohonan.
+   362→profiles.id)
+   363→review_notes text Catatan Pengurus semasa Lulus/KIV/Tolak.
+   364→reviewed_at timestamptz Tarikh & masa tindakan kelulusan.
+   365→created_at / timestamptz Cap masa audit rekod.
+   366→updated_at
+   367→13.4 Jadual `booking_status_history`
+   368→Audit trail bagi setiap perubahan status permohonan.
+   369→Medan Jenis Data Penerangan
+   370→id uuid (PK) Pengecam unik rekod sejarah.
+   371→booking_id uuid (FK Permohonan berkaitan.
+   372→bookings.id)
+   373→old_status text Status sebelum perubahan.
+   374→new_status text Status selepas perubahan.
+   375→changed_by uuid (FK Pengguna yang melakukan perubahan.
+   376→profiles.id)
+   377→notes text Catatan tambahan (cth: sebab penolakan).
+   378→changed_at timestamptz Cap masa perubahan berlaku.
+   379→13.5 Jadual `notifications`
+   380→Notifikasi dalam-sistem bagi setiap pengguna.
+   381→Medan Jenis Data Penerangan
+   382→id uuid (PK) Pengecam unik notifikasi.
+   383→user_id uuid (FK Penerima notifikasi.
+   384→profiles.id)
+   385→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 13
+   386→
+   387→=== PAGE 14 ===
+   388→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   389→Medan Jenis Data Penerangan
+   390→booking_id uuid (FK Permohonan berkaitan (jika berkenaan).
+   391→bookings.id)
+   392→message text Kandungan mesej notifikasi.
+   393→is_read boolean Status telah dibaca atau belum.
+   394→created_at timestamptz Tarikh & masa notifikasi dijana.
+   395→Nota Row Level Security (RLS): Dasar RLS akan dikuatkuasakan supaya (i) Pengguna hanya boleh
+   396→melihat/mengubah tempahan milik sendiri; (ii) Pengurus boleh melihat & bertindak ke atas tempahan bagi fasiliti
+   397→yang diperuntukkan kepadanya (rujuk `facilities.manager_id`); (iii) Pentadbir mempunyai akses penuh kepada
+   398→semua jadual. Fungsi pangkalan data (Postgres function/trigger) turut dicadangkan bagi menyemak pertindigan slot
+   399→masa (overlap check) sebelum sesuatu rekod `bookings` baharu dibenarkan disimpan.
+   400→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 14
+   401→
+   402→=== PAGE 15 ===
+   403→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   404→14. Reka Bentuk UI/UX — Glassmorphism Design System
+   405→Antara muka SiTempah akan menggunakan gaya reka bentuk Glassmorphism — panel separa lut sinar
+   406→(translucent) dengan kesan kabur latar belakang (backdrop blur), sempadan halus (subtle border) dan bayang
+   407→lembut (soft shadow) bagi mewujudkan kesan 'kaca' yang moden, ringan dan mendalam (depth).
+   408→14.1 Prinsip Reka Bentuk Utama
+   409→(cid:127) (cid:127) Kesan Kaca (Glass Panels): Kad (card), modal dan bar navigasi menggunakan latar belakang separa lut sinar
+   410→(opacity 10–20%) dengan `backdrop-filter: blur(16–24px)`.
+   411→(cid:127) (cid:127) Latar Belakang Gradien Dinamik: Gradien lembut warna korporat JTM (biru gelap ke teal) sebagai latar untuk
+   412→menonjolkan panel kaca.
+   413→(cid:127) (cid:127) Sempadan & Bayang Halus: Sempadan 1px putih lut sinar (opacity ~20–30%) dan bayang lembut (soft
+   414→box-shadow) bagi memberi kesan timbul (elevation) tanpa berat.
+   415→(cid:127) (cid:127) Palet Warna: Warna primer Biru Kementerian (#0F4C81), aksen Teal (#14B8A6), dengan status berwarna:
+   416→Hijau (Diluluskan), Kuning/Amber (KIV), Merah (Ditolak), Kelabu (Menunggu/Draf).
+   417→(cid:127) (cid:127) Tipografi: Fon sans-serif moden (cth: Inter/Poppins) dengan hierarki jelas — tajuk tebal, teks badan mudah
+   418→dibaca dengan kontras mencukupi di atas latar kaca.
+   419→(cid:127) (cid:127) Mikro-interaksi: Animasi peralihan lembut (hover, klik, transisi kad) bagi memberi maklum balas visual tanpa
+   420→mengganggu prestasi.
+   421→(cid:127) (cid:127) Responsif Sepenuhnya: Susun atur menyesuaikan diri (adaptive layout) untuk paparan desktop, tablet dan
+   422→mudah alih, dengan navigasi mudah alih berasaskan menu bawah/hamburger.
+   423→(cid:127) (cid:127) Aksesibiliti: Walaupun menggunakan kesan lut sinar, kontras teks-ke-latar dikekalkan pada tahap boleh baca
+   424→(mematuhi garis panduan WCAG AA asas).
+   425→14.2 Komponen Antara Muka Utama
+   426→Skrin / Komponen Penerangan Ringkas
+   427→Papan Pemuka Kad ringkasan kaca menunjukkan bilangan permohonan mengikut status, fasiliti popular,
+   428→(Dashboard) dan kalendar mini.
+   429→Senarai & Carian Fasiliti Grid kad kaca bagi setiap fasiliti dengan gambar, nama, kategori, kapasiti dan status
+   430→kekosongan hari ini.
+   431→Kalendar Kekosongan Paparan kalendar interaktif (bulanan/mingguan) dengan kod warna status slot masa di atas
+   432→panel kaca separa lut sinar.
+   433→Borang Tempahan Modal/panel kaca melangkah (multi-step) untuk mengisi butiran tempahan dengan validasi
+   434→masa nyata.
+   435→Panel Kelulusan Senarai kad permohonan dengan butang tindakan pantas (Lulus / KIV / Tolak) dan ruang
+   436→(Pengurus) catatan.
+   437→Jadual Semua Jadual data (data table) kaca dengan penapis lanjutan, carian dan penanda status
+   438→Permohonan berwarna (status badge/chip).
+   439→Notifikasi Panel tarik-turun (dropdown) kaca menunjukkan senarai notifikasi terkini dengan penanda
+   440→belum dibaca.
+   441→14.3 Contoh Token Reka Bentuk (Design Tokens — CSS)
+   442→--glass-bg: rgba(255,255,255,0.12);
+   443→--glass-border: rgba(255,255,255,0.25);
+   444→--glass-blur: blur(20px);
+   445→--color-primary: #0F4C81;
+   446→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 15
+   447→
+   448→=== PAGE 16 ===
+   449→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   450→--color-accent: #14B8A6;
+   451→--color-success: #22C55E; /* Diluluskan */
+   452→--color-warning: #F59E0B; /* KIV */
+   453→--color-danger: #EF4444; /* Ditolak */
+   454→--color-neutral: #9CA3AF; /* Menunggu */
+   455→--radius-card: 18px;
+   456→--shadow-glass: 0 8px 32px rgba(15,76,129,0.15);
+   457→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 16
+   458→
+   459→=== PAGE 17 ===
+   460→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   461→15. Struktur Navigasi Sistem (Sitemap)
+   462→(cid:127) Log Masuk / Daftar — Halaman pengesahan pengguna (Supabase Auth).
+   463→(cid:127) Papan Pemuka (Dashboard) — Ringkasan mengikut peranan pengguna.
+   464→(cid:127) Fasiliti — Senarai Fasiliti fi Butiran Fasiliti fi Kalendar Kekosongan fi Borang Tempahan.
+   465→(cid:127) Permohonan Saya — Senarai tempahan pengguna berserta status (semua peranan).
+   466→(cid:127) Panel Kelulusan — Khusus Pengurus & Pentadbir: senarai permohonan menunggu tindakan.
+   467→(cid:127) Semua Permohonan — Khusus Pengurus & Pentadbir: jadual penuh semua tempahan sistem.
+   468→(cid:127) Pengurusan Fasiliti — Khusus Pentadbir: CRUD data induk fasiliti.
+   469→(cid:127) Pengurusan Pengguna — Khusus Pentadbir: urus akaun & peranan.
+   470→(cid:127) Notifikasi — Senarai notifikasi terkini untuk semua peranan.
+   471→(cid:127) Profil Saya — Kemas kini maklumat peribadi pengguna.
+   472→16. Integrasi Z.AI (GLM 5.2) dalam Proses Pembangunan
+   473→Z.AI dengan model GLM 5.2 dicadangkan digunakan sebagai pembantu pembangunan (AI coding assistant)
+   474→sepanjang kitaran pembangunan sistem, dengan fokus kepada:
+   475→(cid:127) (cid:127) Penjanaan komponen UI React/Next.js bergaya Glassmorphism berdasarkan spesifikasi reka bentuk dalam
+   476→Bahagian 14.
+   477→(cid:127) (cid:127) Penjanaan skrip migrasi SQL (Supabase migrations) berdasarkan skema pangkalan data dalam Bahagian 13.
+   478→(cid:127) (cid:127) Penjanaan dasar Row Level Security (RLS) mengikut peranan yang digariskan dalam Bahagian 6.
+   479→(cid:127) (cid:127) Penjanaan Edge Functions/Netlify Functions bagi logik semakan konflik tempahan dan notifikasi e-mel.
+   480→(cid:127) (cid:127) Bantuan penulisan ujian unit (unit test) asas dan penyemakan kod (code review) sebelum penggabungan
+   481→(merge).
+   482→Catatan: Semua kod yang dijana oleh AI perlu disemak semula (peer review) oleh pembangun bertauliah JTM
+   483→sebelum digabungkan ke cabang utama (main branch) dan diterbitkan (deploy) ke persekitaran produksi.
+   484→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 17
+   485→
+   486→=== PAGE 18 ===
+   487→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   488→17. Pelan Penempatan (Deployment Plan) — Netlify
+   489→Persekitaran Tujuan Konfigurasi
+   490→Development Pembangunan & ujian oleh pembangun. Supabase local/dev project, .env tempatan.
+   491→(Local)
+   492→Deploy Preview Pratonton automatik bagi setiap Pull Netlify Deploy Previews disambungkan ke Supabase
+   493→(Netlify) Request. staging project.
+   494→Staging Ujian Penerimaan Pengguna (UAT) oleh Netlify branch deploy + Supabase staging database.
+   495→JTM.
+   496→Production Persekitaran hidup (live) untuk kegunaan Netlify production deploy (main branch) + Supabase
+   497→sebenar. production project, domain custom JTM.
+   498→17.1 Aliran CI/CD
+   499→1 (cid:127) Pembangun menolak (push) kod ke repositori Git (GitHub/GitLab).
+   500→2 (cid:127) Netlify secara automatik membina (build) dan menerbitkan Deploy Preview bagi setiap Pull Request.
+   501→3 (cid:127) Selepas kelulusan code review, Pull Request digabungkan ke cabang `main`.
+   502→4 (cid:127) Netlify secara automatik menerbitkan versi terkini ke persekitaran produksi.
+   503→5 (cid:127) Perubahan skema pangkalan data diuruskan melalui Supabase CLI migrations yang dikawal versi bersama
+   504→kod.
+   505→18. Kriteria Penerimaan (Acceptance Criteria) — Contoh
+   506→Keperluan Kriteria Penerimaan
+   507→Semakan Kekosongan Pengguna boleh melihat status kekosongan fasiliti pada kalendar dalam masa < 2 saat
+   508→(FR-04) selepas memilih fasiliti; slot yang ditempah dipaparkan dengan jelas berbeza daripada slot
+   509→kosong.
+   510→Cegah Pertindihan Sistem menolak (reject) sebarang percubaan tempahan yang bertindih dengan tempahan
+   511→(FR-05) sedia ada berstatus Diluluskan atau Menunggu Kelulusan bagi fasiliti & slot masa yang
+   512→sama, dan memaparkan mesej ralat yang jelas.
+   513→Tindakan Kelulusan Pengurus hanya boleh melihat & bertindak ke atas permohonan bagi fasiliti di bawah
+   514→(FR-10) tanggungjawabnya; setiap tindakan (Lulus/KIV/Tolak) mesti direkod dalam audit trail
+   515→dengan cap masa dan pelaku.
+   516→Paparan Semua Pengguna, Pengurus dan Pentadbir masing-masing boleh mengakses paparan
+   517→Permohonan (FR-14) permohonan mengikut skop kebenaran (sendiri sahaja / semua fasiliti bertanggungjawab /
+   518→semua sistem) tanpa ralat capaian.
+   519→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 18
+   520→
+   521→=== PAGE 19 ===
+   522→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   523→19. Risiko & Andaian (Risks & Assumptions)
+   524→19.1 Risiko Utama
+   525→Risiko Kesan Mitigasi
+   526→Pertindihan tempahan akibat Kekeliruan pengguna & Gunakan constraint pangkalan data (exclusion
+   527→kelewatan sinkronisasi data konflik penggunaan fasiliti constraint) & semakan sisi pelayan sebelum simpan.
+   528→Kebergantungan kepada kod Pepijat (bug) atau Wajibkan code review manusia & ujian sebelum
+   529→dijana AI tanpa semakan kelemahan keselamatan deploy ke produksi.
+   530→mencukupi tidak dikesan
+   531→Perubahan keperluan semasa Kelewatan jadual & Kawalan perubahan skop melalui proses kelulusan
+   532→pembangunan (scope creep) peningkatan kos JTM secara berperingkat (fasa).
+   533→Had had penggunaan (usage Gangguan perkhidmatan Pantau penggunaan & naik taraf pelan langganan
+   534→limits) pelan percuma/asas apabila penggunaan mengikut keperluan sebenar.
+   535→Supabase & Netlify meningkat
+   536→19.2 Andaian
+   537→(cid:127) (cid:127) Semua pengguna sistem adalah kakitangan JTM dengan alamat e-mel rasmi yang sah.
+   538→(cid:127) (cid:127) Fasiliti gunasama tidak dikenakan bayaran sewaan pada Fasa 1 pembangunan.
+   539→(cid:127) (cid:127) JTM akan menyediakan capaian domain custom untuk penempatan di Netlify.
+   540→(cid:127) (cid:127) Data induk fasiliti sedia ada (jika ada) boleh dipindahkan (migrate) secara manual/separa automatik ke
+   541→Supabase.
+   542→20. Pelan Pelaksanaan & Pencapaian Utama (Milestones) —
+   543→Cadangan
+   544→Fasa Aktiviti Utama Anggaran Tempoh
+   545→Fasa 1 Persediaan seni bina Supabase, skema pangkalan data, RLS, dan asas Minggu 1–2
+   546→projek Netlify.
+   547→Fasa 2 Pembangunan modul Fasiliti, Kalendar Kekosongan & Borang Tempahan Minggu 3–5
+   548→(dibantu Z.AI GLM 5.2).
+   549→Fasa 3 Pembangunan modul Aliran Kerja Kelulusan, Notifikasi & Papan Pemuka. Minggu 6–8
+   550→Fasa 4 Pengurusan Pengguna, Pelaporan, penyempurnaan UI Glassmorphism & Minggu 9–10
+   551→ujian responsif.
+   552→Fasa 5 Ujian Penerimaan Pengguna (UAT), pembetulan pepijat, dan penerbitan Minggu 11–12
+   553→produksi (go-live) di Netlify.
+   554→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 19
+   555→
+   556→=== PAGE 20 ===
+   557→SISTEM TEMPAHAN FASILITI GUNASAMA (SiTempah) — Product Requirements Document SULIT / CONFIDENTIAL
+   558→21. Glosari Istilah
+   559→Istilah Definisi
+   560→KIV (Kept-In-View) Status sementara di mana permohonan belum diluluskan atau ditolak, menunggu
+   561→maklumat/pengesahan lanjut.
+   562→RLS (Row Level Security) Ciri keselamatan PostgreSQL/Supabase yang mengawal capaian data pada peringkat
+   563→baris (row) mengikut dasar tertentu.
+   564→RBAC (Role-Based Access Kaedah kawalan capaian sistem berdasarkan peranan pengguna
+   565→Control) (User/Manager/Admin).
+   566→Glassmorphism Gaya reka bentuk antara muka yang menggunakan kesan kabur latar belakang dan lut
+   567→sinar untuk mewujudkan rupa seperti kaca.
+   568→Jamstack Seni bina web moden berasaskan JavaScript, API dan Markup yang dihoskan
+   569→statik/serverless.
+   570→CI/CD Continuous Integration/Continuous Deployment — automasi ujian & penerbitan kod.
+   571→SLA Service Level Agreement — sasaran tempoh masa bagi sesuatu
+   572→tindakan/perkhidmatan.
+   573→22. Kelulusan Dokumen
+   574→Peranan Nama Tandatangan Tarikh
+   575→Disediakan Oleh ______________________ ______________________ ______________
+   576→__ __
+   577→Disemak Oleh (Ketua Unit ICT) ______________________ ______________________ ______________
+   578→__ __
+   579→Diluluskan Oleh (Pengarah/Timb. ______________________ ______________________ ______________
+   580→Pengarah) __ __
+   581→Jabatan Tenaga Manusia, Kementerian Sumber Manusia Malaysia Muka Surat 20
+   582→
+   583→
