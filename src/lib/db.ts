@@ -183,49 +183,66 @@ function extractCountRelations(args: QueryArgs): { relations: string[]; cleaned:
   return { relations, cleaned }
 }
 
-// Map Prisma relation names to PostgREST embedding syntax (alias:TableName)
-// PostgREST needs alias:Table(*) format to resolve foreign key relations
-const relationToTable: Record<string, string> = {
-  // Forward relations (FK on this table)
-  manager: "User",
-  facility: "Facility",
-  user: "User",
-  reviewer: "User",
-  changedByUser: "User",
-  booking: "Booking",
-  // Reverse relations (FK on related table)
-  bookings: "Booking",
-  managedFacilities: "Facility",
-  reviewedBookings: "Booking",
-  auditLogs: "AuditLog",
-  notifications: "Notification",
-  statusHistory: "BookingStatusHistory",
+// Context-aware relation mapping: table -> relation -> PostgREST embedding
+// Format: "Table!FKConstraintName" to disambiguate multiple FKs to same table
+const tableRelationMap: Record<string, Record<string, string>> = {
+  Facility: {
+    manager: "User!Facility_managerId_fkey",
+    bookings: "Booking!Booking_facilityId_fkey",
+  },
+  Booking: {
+    facility: "Facility!Booking_facilityId_fkey",
+    user: "User!Booking_userId_fkey",
+    reviewer: "User!Booking_reviewedBy_fkey",
+    statusHistory: "BookingStatusHistory!BookingStatusHistory_bookingId_fkey",
+    notifications: "Notification!Notification_bookingId_fkey",
+  },
+  BookingStatusHistory: {
+    booking: "Booking!BookingStatusHistory_bookingId_fkey",
+    changedByUser: "User!BookingStatusHistory_changedBy_fkey",
+  },
+  Notification: {
+    user: "User!Notification_userId_fkey",
+    booking: "Booking!Notification_bookingId_fkey",
+  },
+  AuditLog: {
+    user: "User!AuditLog_userId_fkey",
+  },
+  User: {
+    bookings: "Booking!Booking_userId_fkey",
+    reviewedBookings: "Booking!Booking_reviewedBy_fkey",
+    managedFacilities: "Facility!Facility_managerId_fkey",
+    statusChanges: "BookingStatusHistory!BookingStatusHistory_changedBy_fkey",
+    notifications: "Notification!Notification_userId_fkey",
+    auditLogs: "AuditLog!AuditLog_userId_fkey",
+  },
 }
 
-// Helper to build select string from include/select
-function buildSelect(include?: IncludeOptions, select?: Record<string, boolean | object>): string {
+// Helper to build select string from include/select, context-aware by table
+function buildSelect(tableName: string, include?: IncludeOptions, select?: Record<string, boolean | object>): string {
+  const relMap = tableRelationMap[tableName] || {}
+
   if (select && Object.keys(select).length > 0) {
     const fields: string[] = []
     for (const [key, val] of Object.entries(select)) {
       if (val === true) {
-        // Check if this is a relation
-        const tableName = relationToTable[key]
-        if (tableName) {
-          fields.push(`${key}:${tableName}(*)`)
+        const tableEmbed = relMap[key]
+        if (tableEmbed) {
+          fields.push(`${key}:${tableEmbed}(*)`)
         } else {
           fields.push(key)
         }
       } else if (typeof val === "object" && val !== null) {
         const nested = val as Record<string, unknown>
-        const tableName = relationToTable[key]
-        if (tableName) {
+        const tableEmbed = relMap[key]
+        if (tableEmbed) {
           if (nested.select && typeof nested.select === "object") {
             const nestedFields = Object.entries(nested.select as Record<string, unknown>)
               .filter(([_, v]) => v === true)
               .map(([k]) => k)
-            fields.push(`${key}:${tableName}(${nestedFields.join(",")})`)
+            fields.push(`${key}:${tableEmbed}(${nestedFields.join(",")})`)
           } else {
-            fields.push(`${key}:${tableName}(*)`)
+            fields.push(`${key}:${tableEmbed}(*)`)
           }
         } else {
           if (nested.select && typeof nested.select === "object") {
@@ -246,22 +263,21 @@ function buildSelect(include?: IncludeOptions, select?: Record<string, boolean |
   if (include) {
     for (const [key, val] of Object.entries(include)) {
       if (key === "_count") continue
-      const tableName = relationToTable[key]
-      if (!tableName) {
-        // Not a known relation, skip
+      const tableEmbed = relMap[key]
+      if (!tableEmbed) {
         continue
       }
       if (val === true) {
-        fields.push(`${key}:${tableName}(*)`)
+        fields.push(`${key}:${tableEmbed}(*)`)
       } else if (typeof val === "object" && val !== null) {
         const nested = val as Record<string, unknown>
         if (nested.select && typeof nested.select === "object") {
           const nestedFields = Object.entries(nested.select as Record<string, unknown>)
             .filter(([_, v]) => v === true)
             .map(([k]) => k)
-          fields.push(`${key}:${tableName}(${nestedFields.join(",")})`)
+          fields.push(`${key}:${tableEmbed}(${nestedFields.join(",")})`)
         } else {
-          fields.push(`${key}:${tableName}(*)`)
+          fields.push(`${key}:${tableEmbed}(*)`)
         }
       }
     }
@@ -319,7 +335,7 @@ class TableHandler {
 
   async findUnique(args: QueryArgs = {}) {
     const { relations, cleaned } = extractCountRelations(args)
-    const select = buildSelect(cleaned.include, cleaned.select as Record<string, boolean | object>)
+    const select = buildSelect(this.tableName, cleaned.include, cleaned.select as Record<string, boolean | object>)
     const headers: Record<string, string> = {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -351,7 +367,7 @@ class TableHandler {
 
   async findMany(args: QueryArgs = {}) {
     const { relations, cleaned } = extractCountRelations(args)
-    const select = buildSelect(cleaned.include, cleaned.select as Record<string, boolean | object>)
+    const select = buildSelect(this.tableName, cleaned.include, cleaned.select as Record<string, boolean | object>)
     const headers: Record<string, string> = {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -393,7 +409,7 @@ class TableHandler {
       Prefer: "return=representation",
     }
 
-    const select = buildSelect(args.include)
+    const select = buildSelect(this.tableName, args.include)
     const url = new URL(`${SUPABASE_URL}/rest/v1/${this.tableName}`)
     url.searchParams.set("select", select)
 
@@ -434,7 +450,7 @@ class TableHandler {
   }
 
   async update(args: { where: WhereClause; data: Record<string, unknown>; include?: IncludeOptions }) {
-    const select = buildSelect(args.include)
+    const select = buildSelect(this.tableName, args.include)
     const headers: Record<string, string> = {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,

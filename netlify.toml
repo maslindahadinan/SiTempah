@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NEXTAUTH_SECRET = "sitempah-adtec-jtm-batu-pahat-secret-key-2026-very-secure-glm52"
+  NEXTAUTH_URL = "$NETLIFY_URL"
