@@ -1,4 +1,4 @@
-import { supabase, SUPABASE_URL, SUPABASE_KEY } from "./supabase-client"
+import { SUPABASE_URL, SUPABASE_KEY } from "./supabase-client"
 
 // ============================================================================
 // Prisma-Compatible Supabase Wrapper
@@ -27,86 +27,112 @@ interface GroupByArgs {
   take?: number
 }
 
-// Helper to convert Prisma where clause to PostgREST filter
-function buildFilter(where: WhereClause): string {
-  const parts: string[] = []
+// Build PostgREST filters and return as array of {key, value} pairs
+// PostgREST format: column=operator.value
+// For complex AND/OR, use and=(...) or or=(...)
+function buildFilters(where: WhereClause): { key: string; value: string }[] {
+  const filters: { key: string; value: string }[] = []
 
   for (const [key, value] of Object.entries(where)) {
     if (value === null || value === undefined) {
-      parts.push(`${key}=is.null`)
+      filters.push({ key, value: "is.null" })
       continue
     }
 
     if (key === "AND" && Array.isArray(value)) {
-      const andParts = value.map((v: WhereClause) => `(${buildFilter(v)})`)
-      parts.push(`and(${andParts.join(",")})`)
+      const andParts = value.map((v: WhereClause) => `(${buildFilters(v).map(f => `${f.key}=${f.value}`).join(",")})`)
+      filters.push({ key: "and", value: `(${andParts.join(",")})` })
       continue
     }
 
     if (key === "OR" && Array.isArray(value)) {
-      const orParts = value.map((v: WhereClause) => `(${buildFilter(v)})`)
-      parts.push(`or(${orParts.join(",")})`)
+      const orParts = value.map((v: WhereClause) => `(${buildFilters(v).map(f => `${f.key}=${f.value}`).join(",")})`)
+      filters.push({ key: "or", value: `(${orParts.join(",")})` })
       continue
     }
 
     if (typeof value === "object" && !Array.isArray(value) && value !== null) {
+      // Handle operators like { contains, gte, lte, gt, lt, in, startsWith, endsWith }
+      const operators: string[] = []
       for (const [op, opVal] of Object.entries(value as Record<string, unknown>)) {
         if (op === "contains") {
-          parts.push(`${key}=ilike.%${String(opVal).replace(/%/g, "\\%")}.%`)
+          operators.push(`${key}=ilike.%${String(opVal).replace(/%/g, "\\%").replace(/,/g, "\\,").replace(/\(/g, "\\(").replace(/\)/g, "\\)")}.%`)
         } else if (op === "startsWith") {
-          parts.push(`${key}=ilike.${String(opVal)}%`)
+          operators.push(`${key}=ilike.${String(opVal)}%`)
         } else if (op === "endsWith") {
-          parts.push(`${key}=ilike.%${String(opVal)}`)
+          operators.push(`${key}=ilike.%${String(opVal)}`)
         } else if (op === "equals") {
           if (opVal === null) {
-            parts.push(`${key}=is.null`)
+            operators.push(`${key}=is.null`)
           } else if (typeof opVal === "boolean") {
-            parts.push(`${key}=eq.${opVal}`)
+            operators.push(`${key}=eq.${opVal}`)
           } else {
-            parts.push(`${key}=eq.${opVal}`)
+            operators.push(`${key}=eq.${opVal}`)
           }
         } else if (op === "gt") {
-          parts.push(`${key}=gt.${opVal}`)
+          operators.push(`${key}=gt.${opVal}`)
         } else if (op === "gte") {
-          parts.push(`${key}=gte.${opVal}`)
+          operators.push(`${key}=gte.${opVal}`)
         } else if (op === "lt") {
-          parts.push(`${key}=lt.${opVal}`)
+          operators.push(`${key}=lt.${opVal}`)
         } else if (op === "lte") {
-          parts.push(`${key}=lte.${opVal}`)
+          operators.push(`${key}=lte.${opVal}`)
         } else if (op === "in" && Array.isArray(opVal)) {
           if (opVal.length === 0) {
-            parts.push(`${key}=eq.__nonexistent__`)
+            operators.push(`${key}=eq.__nonexistent__`)
           } else {
-            parts.push(`${key}=in.(${opVal.join(",")})`)
+            const vals = opVal.map((v) => String(v).replace(/,/g, "\\,")).join(",")
+            operators.push(`${key}=in.(${vals})`)
           }
         } else if (op === "not") {
           if (opVal === null) {
-            parts.push(`${key}=not.is.null`)
+            operators.push(`${key}=not.is.null`)
           } else {
-            parts.push(`${key}=neq.${opVal}`)
+            operators.push(`${key}=neq.${opVal}`)
           }
         } else if (op === "notIn" && Array.isArray(opVal)) {
           if (opVal.length > 0) {
-            parts.push(`not.${key}=in.(${opVal.join(",")})`)
+            const vals = opVal.map((v) => String(v).replace(/,/g, "\\,")).join(",")
+            operators.push(`not.${key}=in.(${vals})`)
           }
         }
+      }
+
+      // If only one operator, use it as a direct filter
+      if (operators.length === 1) {
+        const [k, v] = operators[0].split("=")
+        filters.push({ key: k, value: v })
+      } else if (operators.length > 1) {
+        // Multiple operators on same field - use AND
+        filters.push({ key: "and", value: `(${operators.join(",")})` })
       }
       continue
     }
 
     // Simple equality
     if (typeof value === "string") {
-      parts.push(`${key}=eq.${value}`)
+      // Escape special characters for PostgREST
+      const escaped = value.replace(/,/g, "\\,").replace(/\(/g, "\\(").replace(/\)/g, "\\)")
+      filters.push({ key, value: `eq.${escaped}` })
     } else if (typeof value === "number") {
-      parts.push(`${key}=eq.${value}`)
+      filters.push({ key, value: `eq.${value}` })
     } else if (typeof value === "boolean") {
-      parts.push(`${key}=eq.${value}`)
+      filters.push({ key, value: `eq.${value}` })
     } else if (value instanceof Date) {
-      parts.push(`${key}=eq.${value.toISOString()}`)
+      filters.push({ key, value: `eq.${value.toISOString()}` })
     }
   }
 
-  return parts.join(",")
+  return filters
+}
+
+// Apply filters to URL search params
+function applyFilters(url: URL, where?: WhereClause) {
+  if (!where) return
+  const filters = buildFilters(where)
+  for (const filter of filters) {
+    url.searchParams.append(filter.key, filter.value)
+  }
 }
 
 // Helper to convert orderBy to PostgREST order
@@ -124,7 +150,7 @@ function buildOrder(orderBy: OrderBy): string {
 // Extract _count from include/select and return the relation names to count
 function extractCountRelations(args: QueryArgs): { relations: string[]; cleaned: QueryArgs } {
   const relations: string[] = []
-  const cleaned = { ...args }
+  const cleaned: QueryArgs = { ...args }
 
   if (args.include?._count) {
     const countVal = args.include._count
@@ -136,7 +162,6 @@ function extractCountRelations(args: QueryArgs): { relations: string[]; cleaned:
         }
       }
     }
-    // Remove _count from include
     const { _count: _, ...restInclude } = args.include
     cleaned.include = restInclude
   }
@@ -151,12 +176,30 @@ function extractCountRelations(args: QueryArgs): { relations: string[]; cleaned:
         }
       }
     }
-    // Remove _count from select
     const { _count: _, ...restSelect } = args.select
     cleaned.select = restSelect
   }
 
   return { relations, cleaned }
+}
+
+// Map Prisma relation names to PostgREST embedding syntax (alias:TableName)
+// PostgREST needs alias:Table(*) format to resolve foreign key relations
+const relationToTable: Record<string, string> = {
+  // Forward relations (FK on this table)
+  manager: "User",
+  facility: "Facility",
+  user: "User",
+  reviewer: "User",
+  changedByUser: "User",
+  booking: "Booking",
+  // Reverse relations (FK on related table)
+  bookings: "Booking",
+  managedFacilities: "Facility",
+  reviewedBookings: "Booking",
+  auditLogs: "AuditLog",
+  notifications: "Notification",
+  statusHistory: "BookingStatusHistory",
 }
 
 // Helper to build select string from include/select
@@ -165,16 +208,34 @@ function buildSelect(include?: IncludeOptions, select?: Record<string, boolean |
     const fields: string[] = []
     for (const [key, val] of Object.entries(select)) {
       if (val === true) {
-        fields.push(key)
+        // Check if this is a relation
+        const tableName = relationToTable[key]
+        if (tableName) {
+          fields.push(`${key}:${tableName}(*)`)
+        } else {
+          fields.push(key)
+        }
       } else if (typeof val === "object" && val !== null) {
         const nested = val as Record<string, unknown>
-        if (nested.select && typeof nested.select === "object") {
-          const nestedFields = Object.entries(nested.select as Record<string, unknown>)
-            .filter(([_, v]) => v === true)
-            .map(([k]) => k)
-          fields.push(`${key}(${nestedFields.join(",")})`)
+        const tableName = relationToTable[key]
+        if (tableName) {
+          if (nested.select && typeof nested.select === "object") {
+            const nestedFields = Object.entries(nested.select as Record<string, unknown>)
+              .filter(([_, v]) => v === true)
+              .map(([k]) => k)
+            fields.push(`${key}:${tableName}(${nestedFields.join(",")})`)
+          } else {
+            fields.push(`${key}:${tableName}(*)`)
+          }
         } else {
-          fields.push(`${key}(*)`)
+          if (nested.select && typeof nested.select === "object") {
+            const nestedFields = Object.entries(nested.select as Record<string, unknown>)
+              .filter(([_, v]) => v === true)
+              .map(([k]) => k)
+            fields.push(`${key}(${nestedFields.join(",")})`)
+          } else {
+            fields.push(`${key}(*)`)
+          }
         }
       }
     }
@@ -185,17 +246,22 @@ function buildSelect(include?: IncludeOptions, select?: Record<string, boolean |
   if (include) {
     for (const [key, val] of Object.entries(include)) {
       if (key === "_count") continue
+      const tableName = relationToTable[key]
+      if (!tableName) {
+        // Not a known relation, skip
+        continue
+      }
       if (val === true) {
-        fields.push(`${key}(*)`)
+        fields.push(`${key}:${tableName}(*)`)
       } else if (typeof val === "object" && val !== null) {
         const nested = val as Record<string, unknown>
         if (nested.select && typeof nested.select === "object") {
           const nestedFields = Object.entries(nested.select as Record<string, unknown>)
             .filter(([_, v]) => v === true)
             .map(([k]) => k)
-          fields.push(`${key}(${nestedFields.join(",")})`)
+          fields.push(`${key}:${tableName}(${nestedFields.join(",")})`)
         } else {
-          fields.push(`${key}(*)`)
+          fields.push(`${key}:${tableName}(*)`)
         }
       }
     }
@@ -203,26 +269,14 @@ function buildSelect(include?: IncludeOptions, select?: Record<string, boolean |
   return fields.join(",")
 }
 
-// Map relation names to their table and FK field
-const relationMap: Record<string, { table: string; fkField: string; reverseFk?: string }> = {
-  // Booking relations
-  facility: { table: "Facility", fkField: "facilityId" },
-  user: { table: "User", fkField: "userId" },
-  reviewer: { table: "User", fkField: "reviewedBy" },
-  // Facility relations
-  manager: { table: "User", fkField: "managerId" },
-  bookings: { table: "Booking", fkField: "facilityId", reverseFk: "facilityId" },
-  // User relations - reverse relations
-  managedFacilities: { table: "Facility", fkField: "managerId", reverseFk: "managerId" },
-  reviewedBookings: { table: "Booking", fkField: "reviewedBy", reverseFk: "reviewedBy" },
-  // BookingStatusHistory relations
-  changedByUser: { table: "User", fkField: "changedBy" },
-  // Notification relations
-  booking: { table: "Booking", fkField: "bookingId" },
-  // AuditLog relations
-  auditLogs: { table: "AuditLog", fkField: "userId", reverseFk: "userId" },
-  notifications: { table: "Notification", fkField: "userId", reverseFk: "userId" },
-  statusHistory: { table: "BookingStatusHistory", fkField: "bookingId", reverseFk: "bookingId" },
+// Map relation names to their table and FK field for _count
+const relationMap: Record<string, { table: string; reverseFk?: string }> = {
+  bookings: { table: "Booking", reverseFk: "facilityId" },
+  managedFacilities: { table: "Facility", reverseFk: "managerId" },
+  reviewedBookings: { table: "Booking", reverseFk: "reviewedBy" },
+  auditLogs: { table: "AuditLog", reverseFk: "userId" },
+  notifications: { table: "Notification", reverseFk: "userId" },
+  statusHistory: { table: "BookingStatusHistory", reverseFk: "bookingId" },
 }
 
 // Generic table handler
@@ -234,32 +288,27 @@ class TableHandler {
       const countObj: Record<string, number> = {}
       for (const rel of relations) {
         const relInfo = relationMap[rel]
-        if (!relInfo) {
+        if (!relInfo || !relInfo.reverseFk || !record.id) {
           countObj[rel] = 0
           continue
         }
 
-        // For reverse relations (one-to-many), count records where FK = this record's id
-        if (relInfo.reverseFk) {
-          const filter = `${relInfo.reverseFk}=eq.${record.id}`
-          const url = new URL(`${SUPABASE_URL}/rest/v1/${relInfo.table}`)
-          url.searchParams.set("select", "id")
-          url.searchParams.set("limit", "0")
-          url.searchParams.set("and", `(${filter})`)
-          const res = await fetch(url.toString(), {
-            headers: {
-              apikey: SUPABASE_KEY,
-              Authorization: `Bearer ${SUPABASE_KEY}`,
-              Prefer: "count=exact",
-            },
-          })
-          if (res.ok) {
-            const contentRange = res.headers.get("content-range")
-            const count = parseInt(contentRange?.split("/")[1] || "0")
-            countObj[rel] = count
-          } else {
-            countObj[rel] = 0
-          }
+        const url = new URL(`${SUPABASE_URL}/rest/v1/${relInfo.table}`)
+        url.searchParams.set("select", "id")
+        url.searchParams.set("limit", "0")
+        url.searchParams.set(relInfo.reverseFk, `eq.${record.id}`)
+
+        const res = await fetch(url.toString(), {
+          headers: {
+            apikey: SUPABASE_KEY,
+            Authorization: `Bearer ${SUPABASE_KEY}`,
+            Prefer: "count=exact",
+          },
+        })
+        if (res.ok) {
+          const contentRange = res.headers.get("content-range")
+          const count = parseInt(contentRange?.split("/")[1] || "0")
+          countObj[rel] = count
         } else {
           countObj[rel] = 0
         }
@@ -270,7 +319,6 @@ class TableHandler {
 
   async findUnique(args: QueryArgs = {}) {
     const { relations, cleaned } = extractCountRelations(args)
-    const filter = cleaned.where ? buildFilter(cleaned.where) : ""
     const select = buildSelect(cleaned.include, cleaned.select as Record<string, boolean | object>)
     const headers: Record<string, string> = {
       apikey: SUPABASE_KEY,
@@ -279,13 +327,13 @@ class TableHandler {
 
     const url = new URL(`${SUPABASE_URL}/rest/v1/${this.tableName}`)
     url.searchParams.set("select", select)
-    if (filter) url.searchParams.set("and", `(${filter})`)
+    applyFilters(url, cleaned.where)
     url.searchParams.set("limit", "1")
 
     const res = await fetch(url.toString(), { headers })
     if (!res.ok) {
       const err = await res.text()
-      throw new Error(`Database error: ${err}`)
+      throw new Error(`Database error (${res.status}): ${err}`)
     }
     const data = await res.json()
     const record = data[0] || null
@@ -303,7 +351,6 @@ class TableHandler {
 
   async findMany(args: QueryArgs = {}) {
     const { relations, cleaned } = extractCountRelations(args)
-    const filter = cleaned.where ? buildFilter(cleaned.where) : ""
     const select = buildSelect(cleaned.include, cleaned.select as Record<string, boolean | object>)
     const headers: Record<string, string> = {
       apikey: SUPABASE_KEY,
@@ -312,14 +359,14 @@ class TableHandler {
 
     const url = new URL(`${SUPABASE_URL}/rest/v1/${this.tableName}`)
     url.searchParams.set("select", select)
-    if (filter) url.searchParams.set("and", `(${filter})`)
+    applyFilters(url, cleaned.where)
 
     if (args.orderBy) {
       url.searchParams.set("order", buildOrder(args.orderBy))
     }
-    if (args.take) {
-      url.searchParams.set("limit", String(args.take))
-    }
+    // PostgREST default limit is 1000, but we want all records. Set a high limit.
+    const limit = args.take || 10000
+    url.searchParams.set("limit", String(limit))
     if (args.skip) {
       url.searchParams.set("offset", String(args.skip))
     }
@@ -327,7 +374,7 @@ class TableHandler {
     const res = await fetch(url.toString(), { headers })
     if (!res.ok) {
       const err = await res.text()
-      throw new Error(`Database error: ${err}`)
+      throw new Error(`Database error (${res.status}): ${err}`)
     }
     const records = await res.json()
 
@@ -358,7 +405,7 @@ class TableHandler {
 
     if (!res.ok) {
       const err = await res.text()
-      throw new Error(`Database error: ${err}`)
+      throw new Error(`Database error (${res.status}): ${err}`)
     }
     const data = await res.json()
     return data[0] || data
@@ -381,13 +428,12 @@ class TableHandler {
 
     if (!res.ok) {
       const err = await res.text()
-      throw new Error(`Database error: ${err}`)
+      throw new Error(`Database error (${res.status}): ${err}`)
     }
     return { count: args.data.length }
   }
 
   async update(args: { where: WhereClause; data: Record<string, unknown>; include?: IncludeOptions }) {
-    const filter = buildFilter(args.where)
     const select = buildSelect(args.include)
     const headers: Record<string, string> = {
       apikey: SUPABASE_KEY,
@@ -398,7 +444,7 @@ class TableHandler {
 
     const url = new URL(`${SUPABASE_URL}/rest/v1/${this.tableName}`)
     url.searchParams.set("select", select)
-    url.searchParams.set("and", `(${filter})`)
+    applyFilters(url, args.where)
 
     const res = await fetch(url.toString(), {
       method: "PATCH",
@@ -408,14 +454,13 @@ class TableHandler {
 
     if (!res.ok) {
       const err = await res.text()
-      throw new Error(`Database error: ${err}`)
+      throw new Error(`Database error (${res.status}): ${err}`)
     }
     const data = await res.json()
     return data[0] || data
   }
 
   async updateMany(args: { where: WhereClause; data: Record<string, unknown> }) {
-    const filter = buildFilter(args.where)
     const headers: Record<string, string> = {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -424,7 +469,7 @@ class TableHandler {
     }
 
     const url = new URL(`${SUPABASE_URL}/rest/v1/${this.tableName}`)
-    url.searchParams.set("and", `(${filter})`)
+    applyFilters(url, args.where)
 
     const res = await fetch(url.toString(), {
       method: "PATCH",
@@ -434,14 +479,13 @@ class TableHandler {
 
     if (!res.ok) {
       const err = await res.text()
-      throw new Error(`Database error: ${err}`)
+      throw new Error(`Database error (${res.status}): ${err}`)
     }
     const data = await res.json()
     return { count: Array.isArray(data) ? data.length : 0 }
   }
 
   async delete(args: { where: WhereClause; include?: IncludeOptions }) {
-    const filter = buildFilter(args.where)
     const headers: Record<string, string> = {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -450,7 +494,7 @@ class TableHandler {
     }
 
     const url = new URL(`${SUPABASE_URL}/rest/v1/${this.tableName}`)
-    url.searchParams.set("and", `(${filter})`)
+    applyFilters(url, args.where)
 
     const res = await fetch(url.toString(), {
       method: "DELETE",
@@ -459,7 +503,7 @@ class TableHandler {
 
     if (!res.ok) {
       const err = await res.text()
-      throw new Error(`Database error: ${err}`)
+      throw new Error(`Database error (${res.status}): ${err}`)
     }
     const data = await res.json()
     return data[0] || data
@@ -471,7 +515,6 @@ class TableHandler {
   }
 
   async count(args: { where?: WhereClause } = {}) {
-    const filter = args.where ? buildFilter(args.where) : ""
     const headers: Record<string, string> = {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -481,12 +524,12 @@ class TableHandler {
     const url = new URL(`${SUPABASE_URL}/rest/v1/${this.tableName}`)
     url.searchParams.set("select", "id")
     url.searchParams.set("limit", "0")
-    if (filter) url.searchParams.set("and", `(${filter})`)
+    applyFilters(url, args.where)
 
     const res = await fetch(url.toString(), { headers })
     if (!res.ok) {
       const err = await res.text()
-      throw new Error(`Database error: ${err}`)
+      throw new Error(`Database error (${res.status}): ${err}`)
     }
     const contentRange = res.headers.get("content-range")
     const count = parseInt(contentRange?.split("/")[1] || "0")
@@ -495,7 +538,6 @@ class TableHandler {
 
   async groupBy(args: GroupByArgs) {
     const byFields = Array.isArray(args.by) ? args.by : (args.by ? [args.by] : [])
-    const filter = args.where ? buildFilter(args.where) : ""
     const headers: Record<string, string> = {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -504,7 +546,7 @@ class TableHandler {
     const url = new URL(`${SUPABASE_URL}/rest/v1/${this.tableName}`)
     const selectFields = byFields.length > 0 ? byFields.join(",") : "*"
     url.searchParams.set("select", selectFields)
-    if (filter) url.searchParams.set("and", `(${filter})`)
+    applyFilters(url, args.where)
 
     if (args.take) {
       url.searchParams.set("limit", String(args.take))
@@ -516,7 +558,7 @@ class TableHandler {
     const res = await fetch(url.toString(), { headers })
     if (!res.ok) {
       const err = await res.text()
-      throw new Error(`Database error: ${err}`)
+      throw new Error(`Database error (${res.status}): ${err}`)
     }
     const records = await res.json()
 
