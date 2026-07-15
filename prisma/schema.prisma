@@ -1,13 +1,13 @@
 // SiTempah - Sistem Tempahan Fasiliti Gunasama
 // ADTEC JTM Kampus Batu Pahat
-// Prisma Schema with SQLite
+// Prisma Schema with PostgreSQL (Supabase)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -20,8 +20,8 @@ model User {
   phoneNumber  String?
   role         String   @default("user") // user, manager, admin
   isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now()) @db.Timestamptz
+  updatedAt    DateTime @updatedAt @db.Timestamptz
 
   // Relations
   bookings           Booking[]               @relation("UserBookings")
@@ -46,8 +46,8 @@ model Facility {
   managerId      String?
   isActive       Boolean  @default(true)
   operatingHours String   @default("{}") // JSON stored as string
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now()) @db.Timestamptz
+  updatedAt      DateTime @updatedAt @db.Timestamptz
 
   // Relations
   manager  User?      @relation(fields: [managerId], references: [id])
@@ -63,17 +63,17 @@ model Booking {
   facilityId     String
   userId         String
   title          String
-  startTime      DateTime
-  endTime        DateTime
+  startTime      DateTime  @db.Timestamptz
+  endTime        DateTime  @db.Timestamptz
   attendeesCount Int
   purposeNotes   String
   attachmentUrl  String?
   status         String    @default("pending") // draft, pending, kiv, approved, rejected, cancelled, expired
   reviewedBy     String?
   reviewNotes    String?
-  reviewedAt     DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  reviewedAt     DateTime? @db.Timestamptz
+  createdAt      DateTime  @default(now()) @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @db.Timestamptz
 
   // Relations
   facility      Facility                 @relation(fields: [facilityId], references: [id])
@@ -96,11 +96,11 @@ model BookingStatusHistory {
   newStatus String
   changedBy String
   notes     String?
-  changedAt DateTime @default(now())
+  changedAt DateTime @default(now()) @db.Timestamptz
 
   // Relations
-  booking  Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  changedByUser User @relation(fields: [changedBy], references: [id])
+  booking       Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  changedByUser User    @relation(fields: [changedBy], references: [id])
 
   @@index([bookingId])
 }
@@ -112,7 +112,7 @@ model Notification {
   message   String
   type      String   @default("info") // info, success, warning, danger
   isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz
 
   // Relations
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -130,7 +130,7 @@ model AuditLog {
   entityId  String?
   details   String
   ipAddress String?
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz
 
   // Relations
   user User? @relation(fields: [userId], references: [id])
