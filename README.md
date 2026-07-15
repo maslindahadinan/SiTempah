@@ -92,7 +92,25 @@ npm run build
 npm start
 ```
 
-## Deployment (Netlify)
+## Deployment (Vercel)
+
+### Option A: Via Vercel Dashboard
+1. Push this repository to GitHub
+2. Go to [Vercel](https://vercel.com)
+3. Click **Add New** → **Project**
+4. Import your GitHub repo: `maslindahadinan/SiTempah`
+5. Vercel auto-detects Next.js — no config needed
+6. Add environment variable: `NEXTAUTH_SECRET` = `sitempah-adtec-jtm-batu-pahat-secret-key-2026-very-secure-glm52`
+7. Click **Deploy**
+
+### Option B: Via Vercel CLI
+```bash
+npm install -g vercel
+vercel login
+vercel --prod
+```
+
+## Deployment (Netlify - Alternative)
 
 1. Push this repository to GitHub
 2. Go to [Netlify](https://app.netlify.com)

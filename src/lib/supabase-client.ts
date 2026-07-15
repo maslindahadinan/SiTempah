@@ -1,7 +1,10 @@
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = "https://lcmtjdpgpfzsoygoujlf.supabase.co"
-const supabaseKey = "sb_publishable_Lo2DcF0Kb12lYnuPcmzfhw_3L-T_Beo"
+// Supabase configuration - uses environment variables with fallbacks
+// Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_KEY in Vercel dashboard
+// Or update these defaults with your Supabase project credentials
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://lcmtjdpgpfzsoygoujlf.supabase.co"
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY || "sb_publishable_Lo2DcF0Kb12lYnuPcmzfhw_3L-T_Beo"
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {

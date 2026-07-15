@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "installCommand": "npm install",
+  "regions": ["sin1"],
+  "env": {
+    "NEXTAUTH_SECRET": "sitempah-adtec-jtm-batu-pahat-secret-key-2026-very-secure-glm52"
+  }
+}

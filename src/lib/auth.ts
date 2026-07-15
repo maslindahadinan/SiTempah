@@ -72,5 +72,5 @@ export const authOptions: NextAuthOptions = {
       return session
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || "sitempah-adtec-jtm-secret-key-2026-very-secure",
+  secret: process.env.NEXTAUTH_SECRET || "sitempah-adtec-jtm-batu-pahat-secret-key-2026-very-secure-glm52",
 }
